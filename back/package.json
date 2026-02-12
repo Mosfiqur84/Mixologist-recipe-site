@@ -1,0 +1,34 @@
+{
+  "scripts": {
+    "setup": "rm -f database.db && sqlite3 database.db < setup.sql",
+    "data": "cd src && tsx populate.ts",
+    "build": "tsc",
+    "start": "cd dist && node server.js",
+    "dev": "cd src && tsx --watch server.ts",
+    "test": "vitest"
+  },
+  "type": "module",
+  "dependencies": {
+    "argon2": "^0.44.0",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "moment": "^2.30.1",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.0.2",
+    "zod": "^4.3.2"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.3",
+    "axios": "^1.6.5",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
+  },
+  "overrides": {
+    "tar": "^7.5.3"
+  }
+}

@@ -120,6 +120,35 @@ app.delete("/api/recipes/:id", async (req, res) => {
   }
 });
 
+app.get("/api/recipes/search", async (req, res) => {
+  try {
+    const searchQuery = String(req.query.q || "").trim();
+
+    // Frontend already uses "s" (name) and "i" (ingredient),
+    // matching TheCocktailDB API, so we keep that here.
+    const searchType = String(req.query.type || "s");
+
+    if (!searchQuery) {
+      return res.json({ recipes: [] });
+    }
+
+    const searchPattern = `%${searchQuery}%`;
+
+    let recipes;
+
+    if (searchType === "i") {
+      recipes = await db.all("SELECT * FROM recipes WHERE ingredients LIKE ? ORDER BY title ASC", [searchPattern]);
+    } else {
+      recipes = await db.all("SELECT * FROM recipes WHERE title LIKE ? ORDER BY title ASC", [searchPattern]);
+    }
+
+    res.json({ recipes });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database search failed" });
+  }
+});
+
 
 
 

@@ -34,6 +34,12 @@ app.use(limiter);
 
 const sessions: Record<string, string> = {};
 
+app.get("/api/me", async (req, res) => {
+  const username = await getLoggedInUser(req);
+  if (!username) return res.status(401).json({ error: "Not logged in" });
+  res.json({ username });
+});
+
 function parseError(zodError: z.ZodError): string[] {
   let { formErrors, fieldErrors } = zodError.flatten();
   // fancy functional programming
@@ -257,12 +263,21 @@ app.post("/api/login", async (req, res) => {
 // POST /api/register [cite: 7, 29]
 app.post("/api/register", async (req, res) => {
   const { username, password } = req.body;
-  
-  // Server-side validation for existing user [cite: 7, 29]
-  const existing = await db.get("SELECT * FROM users WHERE username = ?", [username]);
-  if (existing) return res.status(400).json({ error: "Username taken" });
 
-  const hashed = await argon2.hash(password); // [cite: 4]
+  if (!username || typeof username !== "string" || username.trim().length < 3) {
+    return res.status(400).json({ error: "Username must be at least 3 characters." });
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    return res.status(400).json({ error: "Username can only contain letters, numbers, and underscores." });
+  }
+  if (!password || typeof password !== "string" || password.length < 3) {
+    return res.status(400).json({ error: "Password must be 3 letters long." });
+  }
+
+  const existing = await db.get("SELECT * FROM users WHERE username = ?", [username]);
+  if (existing) return res.status(400).json({ error: "Username already taken." });
+
+  const hashed = await argon2.hash(password);
   await db.run("INSERT INTO users (username, hashed_password) VALUES (?, ?)", [username, hashed]);
   res.status(201).json({ message: "Account created" });
 });

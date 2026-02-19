@@ -55,183 +55,68 @@ async function getLoggedInUser(req: express.Request): Promise<string | null> {
   return sessions[token]; // Returns the username associated with the token [cite: 28]
 }
 
-const authorBodySchema = z.object({
+
+// Replace bookBodySchema with this:
+const recipeBodySchema = z.object({
   id: z.string(),
-  name: z.string().min(1, "Name is required"), 
-  bio: z.optional(z.string()), 
+  title: z.string().min(1, "Title is required"),
+  instructions: z.string().optional(),
+  ingredients: z.string().optional(),
+  image_url: z.string().optional(),
+  category: z.string().optional(),
 });
 
-type Author = z.infer<typeof authorBodySchema>;
-type AuthorDB = Author; 
-
-const bookBodySchema = z.object({
-  id: z.string(), 
-  author_id: z.string(), 
-  title: z.string().min(1, "Title is required"), 
-  pub_year: z.string().regex(/^\d{4}$/, "Must be a 4-digit year (e.g. 1995)"), 
-  genre: z.string().optional(), 
-});
-
-type Book = z.infer<typeof bookBodySchema>;
-type BookDB = Book; 
-
-
-// POST /authors - Create a new author (Login Required) 
-app.post("/api/authors", async (req, res) => {
-  const username = await getLoggedInUser(req);
-  if (!username) return res.status(401).json({ error: "Unauthorized: Please log in." });
-
-  let parseResult = authorBodySchema.safeParse(req.body);
-  if (!parseResult.success) {
-    return res.status(400).json({ errors: parseError(parseResult.error) });
-  }
-
-  const { id, name, bio } = parseResult.data;
+// Replace the old GET /api/books with this
+app.get("/api/recipes", async (req, res) => {
   try {
-    await db.run(
-      "INSERT INTO authors(id, name, bio) VALUES(?, ?, ?)",
-      [id, name, bio]
-    );
-    res.status(201).set("Location", id).json();
+    // We use "recipes" instead of "books" now
+    const recipes = await db.all("SELECT * FROM recipes ORDER BY title ASC");
+    res.json({ recipes });
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    console.error(err);
+    res.status(500).json({ error: "Database error: Did you run npm run setup?" });
   }
 });
 
-// GET /authors - Get all authors
-app.get("/api/authors", async (req, res) => {
-  try {
-    const authors = await db.all<AuthorDB[]>("SELECT * FROM authors");
-    res.json({ authors });
-  } catch (err) {
-    res.status(500).json({ error: "Database error" });
-  }
-});
+// Update the POST /api/recipes route to use the correct columns
+app.post("/api/recipes", async (req, res) => {
+  // Try to get the user, but don't error out if they are null
+  const username = await getLoggedInUser(req); 
 
-// GET /books - Get all books with optional genre filter
-app.get("/api/books", async (req, res) => {
-  const { genre } = req.query; // e.g., /books?genre=sci-fi
-  let query = "SELECT * FROM books";
-  let params: any[] = [];
-
-  if (genre) {
-    query += " WHERE genre = ?";
-    params.push(genre);
-  }
-
-  query += " ORDER BY title ASC";
-
-  try {
-    const books = await db.all<BookDB[]>(query, params);
-    res.json({ books });
-  } catch (err) {
-    res.status(500).json({ error: "Database error" });
-  }
-});
-
-// POST /books - Create a new book (Login Required) 
-app.post("/api/books", async (req, res) => {
-  const username = await getLoggedInUser(req);
-  if (!username) return res.status(401).json({ error: "Unauthorized: Please log in." });
-
-  let parseResult = bookBodySchema.safeParse(req.body);
-  if (!parseResult.success) {
-    return res.status(400).json({ errors: parseError(parseResult.error) });
-  }
-
-  const { id, author_id, title, pub_year, genre } = parseResult.data;
-  try {
-    // We include the 'created_by' field to track ownership 
-    await db.run(
-      "INSERT INTO books(id, author_id, title, pub_year, genre, created_by) VALUES(?, ?, ?, ?, ?, ?)",
-      [id, author_id, title, pub_year, genre, username]
-    );
-    res.status(201).set("Location", id).json();
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
-
-// GET /books/:id - Get a single book
-app.get("/api/books/:id", async (req, res) => {
-  const { id } = req.params;
-  const book = await db.get<BookDB>("SELECT * FROM books WHERE id = ?", [id]);
-  if (!book) return res.status(404).json({ error: "Book not found" });
-  res.json(book);
-});
-
-// DELETE /books/:id - Remove a book (Login Required + Ownership Required) 
-app.delete("/api/books/:id", async (req, res) => {
-  const username = await getLoggedInUser(req);
-  if (!username) return res.status(401).json({ error: "Unauthorized: Please log in." });
-
-  const { id } = req.params;
-
-  // 1. Check ownership [cite: 26]
-  const book = await db.get("SELECT created_by FROM books WHERE id = ?", [id]);
-  if (!book) return res.status(404).json({ error: "Book not found" });
-
-  // 2. Authorization check 
-  if (book.created_by !== username) {
-    return res.status(403).json({ error: "Forbidden: You can only delete books you created." });
-  }
-
-  await db.run("DELETE FROM books WHERE id = ?", [id]);
-  res.status(204).send();
-});
-
-// PUT /books/:id - Update a book (Login Required + Ownership Required) 
-app.put("/api/books/:id", async (req, res) => {
-  const username = await getLoggedInUser(req);
-  if (!username) return res.status(401).json({ error: "Unauthorized: Please log in." });
-
-  const { id } = req.params;
+  const { id, title, instructions, ingredients, image_url, category } = req.body;
   
-  // 1. Check if the book exists and who created it [cite: 26]
-  const book = await db.get("SELECT created_by FROM books WHERE id = ?", [id]);
-  if (!book) return res.status(404).json({ error: "Book not found" });
-
-  // 2. Authorization check: must be the creator 
-  if (book.created_by !== username) {
-    return res.status(403).json({ error: "Forbidden: You can only edit books you created." });
-  }
-
-  let parseResult = bookBodySchema.safeParse(req.body);
-  if (!parseResult.success) {
-    return res.status(400).json({ errors: parseError(parseResult.error) });
-  }
-
-  const { author_id, title, pub_year, genre } = parseResult.data;
-
   try {
     await db.run(
-      `UPDATE books SET author_id = ?, title = ?, pub_year = ?, genre = ? WHERE id = ?`,
-      [author_id, title, pub_year, genre, id]
+      "INSERT INTO recipes(id, title, instructions, ingredients, image_url, category, created_by) VALUES(?, ?, ?, ?, ?, ?, ?)",
+      [id, title, instructions, ingredients, image_url, category, username || null] // Use null for guests
     );
-    res.json({ message: "Book updated successfully" });
+    res.status(201).json({ message: "Recipe saved to the public cabinet!" });
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    console.error(err);
+    res.status(500).json({ error: "This recipe is already in the cabinet." });
   }
 });
 
-// GET /authors/:id - Get a single author
-app.get("/api/authors/:id", async (req, res) => {
-  const { id } = req.params;
-  const author = await db.get<AuthorDB>("SELECT * FROM authors WHERE id = ?", [id]);
-  if (!author) return res.status(404).json({ error: "Author not found" });
-  res.json(author);
-});
-
-// DELETE /authors/:id - Remove an author (Login Required) 
-app.delete("/api/authors/:id", async (req, res) => {
+app.delete("/api/recipes/:id", async (req, res) => {
   const username = await getLoggedInUser(req);
-  if (!username) return res.status(401).json({ error: "Unauthorized: Please log in." });
+  if (!username) return res.status(401).json({ error: "Please login first." });
 
-  const { id } = req.params;
-  const result = await db.run("DELETE FROM authors WHERE id = ?", [id]);
-  if (result.changes === 0) return res.status(404).json({ error: "Author not found" });
-  res.status(204).send();
+  try {
+    // Ensure users can only delete their own recipes
+    const result = await db.run(
+      "DELETE FROM recipes WHERE id = ? AND created_by = ?",
+      [req.params.id, username]
+    );
+    if (result.changes === 0) return res.status(403).json({ error: "Unauthorized" });
+    res.json({ message: "Deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Database error" });
+  }
 });
+
+
+
+
 
 
 

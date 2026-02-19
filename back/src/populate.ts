@@ -9,33 +9,21 @@ async function populate() {
   });
 
   console.log("Clearing existing data...");
-  await db.run("DELETE FROM books");
-  await db.run("DELETE FROM authors");
+  // Update these to match the tables in setup.sql
+  await db.run("DELETE FROM recipes");
   await db.run("DELETE FROM users");
 
-  console.log("Inserting dummy user");
+  console.log("Inserting dummy user...");
   const hashedPassword = await argon2.hash("bar");
   await db.run(
     "INSERT INTO users (username, hashed_password) VALUES (?, ?)",
     ["foo", hashedPassword]
   );
 
-  console.log("Inserting dummy authors and books");
+  console.log("Inserting dummy recipe...");
   await db.run(`
-    INSERT INTO authors (id, name, bio) VALUES 
-    ('1', 'Author 1', 'Author of Books.'),
-    ('2', 'Author 2', 'Author of Books.')
-  `);
-
-  // Insert Books
-  await db.run(`
-    INSERT INTO books (id, author_id, title, pub_year, genre, created_by) VALUES 
-    ('101', '1', 'Book 1', '1977', 'Horror', 'foo'),
-    ('102', '1', 'Book 2', '1986', 'Horror', 'foo'),
-    ('103', '1', 'Book 3', '1987', 'Thriller', 'foo'),
-    ('104', '2', 'Book 4', '2019', 'Romance', 'foo'),
-    ('105', '2', 'Book 5', '2022', 'Romance', 'foo'),
-    ('106', '2', 'Book 6', '2018', 'Romance', 'foo')
+    INSERT INTO recipes (id, title, instructions, ingredients, image_url, category, created_by) VALUES 
+    ('11007', 'Margarita', 'Rub the rim of the glass with the lime slice...', 'Tequila, Triple Sec, Lime Juice', 'https://www.thecocktaildb.com/images/media/drink/5noda61589575158.jpg', 'Ordinary Drink', 'foo')
   `);
 
   console.log("Database populated successfully!");

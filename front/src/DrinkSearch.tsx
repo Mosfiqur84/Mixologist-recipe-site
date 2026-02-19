@@ -63,6 +63,35 @@ function DrinkSearch() {
     }
   };
 
+  const handleSave = async () => {
+  if (!selectedDrink) return;
+
+  // Transform API ingredients into a single readable string for your database
+  const ingredientsString = Array.from({ length: 15 })
+    .map((_, i) => {
+      const ing = selectedDrink[`strIngredient${i + 1}`];
+      const meas = selectedDrink[`strMeasure${i + 1}`];
+      return ing ? `${meas ? meas : ""} ${ing}`.trim() : null;
+    })
+    .filter(Boolean)
+    .join(", ");
+
+  try {
+    await axios.post("/api/recipes", {
+      id: selectedDrink.idDrink,
+      title: selectedDrink.strDrink,
+      instructions: selectedDrink.strInstructions,
+      ingredients: ingredientsString,
+      image_url: selectedDrink.strDrinkThumb,
+      category: selectedDrink.strCategory,
+    });
+    alert("Saved to Cabinet!"); // This will now work for everyone
+    setOpen(false);
+  } catch (err: any) {
+    alert("Could not save recipe.");
+  }
+};
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>Discover Cocktails</Typography>
@@ -153,10 +182,17 @@ function DrinkSearch() {
               <Typography variant="body1">{selectedDrink.strInstructions}</Typography>
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setOpen(false)}>Close</Button>
-              {/* Future Remix/Save hook */}
-              <Button variant="contained">Save to My Cabinet</Button>
-            </DialogActions>
+  <Button onClick={() => setOpen(false)}>Close</Button>
+  
+  {/* Link the button to the handleSave function */}
+  <Button 
+    variant="contained" 
+    color="primary" 
+    onClick={handleSave}
+  >
+    Save to My Cabinet
+  </Button>
+</DialogActions>
           </>
         )}
       </Dialog>

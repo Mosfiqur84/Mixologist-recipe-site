@@ -3,19 +3,13 @@ CREATE TABLE users (
     hashed_password TEXT NOT NULL
 );
 
-CREATE TABLE authors (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    bio TEXT
-);
-
-CREATE TABLE books (
-    id TEXT PRIMARY KEY,
-    author_id TEXT,
-    title TEXT,
-    pub_year TEXT,
-    genre TEXT,
-    created_by TEXT, -- Tracks which user created this book
-    FOREIGN KEY(author_id) REFERENCES authors(id),
+CREATE TABLE recipes (
+    id TEXT PRIMARY KEY, 
+    title TEXT NOT NULL,
+    instructions TEXT,
+    ingredients TEXT,  
+    image_url TEXT,
+    category TEXT,
+    created_by TEXT,
     FOREIGN KEY(created_by) REFERENCES users(username)
 );

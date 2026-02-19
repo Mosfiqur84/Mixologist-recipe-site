@@ -1,7 +1,7 @@
 import ReactDOM from "react-dom/client";
 import React, { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import BookTable from "./BookTable";
+import RecipeTable from "./RecipeTable";
 import AddForms from "./AddForms";
 import EditBook from "./EditBook";
 import Layout from "./Layout";
@@ -17,7 +17,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Layout user={user} />}>
-          <Route index element={<BookTable currentUser={user} />} />
+          <Route index element={<RecipeTable currentUser={user} />} />
           <Route path="add" element={<AddForms />} />
           <Route path="edit/:id" element={<EditBook />} />
           <Route path="login" element={<Login onLogin={(name) => setUser(name)} />} />

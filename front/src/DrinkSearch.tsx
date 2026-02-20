@@ -92,30 +92,45 @@ function DrinkSearch() {
     setOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!selectedDrink) return;
-
-    // Transform API ingredients into a single readable string for your database
-    const ingredientsString = Array.from({ length: 15 })
-      .map((_, i) => {
-        const ing = selectedDrink[`strIngredient${i + 1}`];
-        const meas = selectedDrink[`strMeasure${i + 1}`];
-        return ing ? `${meas ? meas : ""} ${ing}`.trim() : null;
-      })
-      .filter(Boolean)
-      .join(", ");
-
+  const handleSaveToCabinet = async () => {
     try {
-      await axios.post("/api/recipes", {
-        id: selectedDrink.idDrink,
-        title: selectedDrink.strDrink,
-        instructions: selectedDrink.strInstructions,
-        ingredients: ingredientsString,
-        image_url: selectedDrink.strDrinkThumb,
-        category: selectedDrink.strCategory,
-      });
-      alert("Saved to Cabinet!"); // This will now work for everyone
-      handleCloseDialog();
+      // If API recipe
+      if (selectedDrink) {
+        let recipeId = selectedDrink.idDrink;
+
+        // Transform API ingredients into a single readable string for your database
+        const ingredientsString = Array.from({ length: 15 })
+        .map((_, i) => {
+          const ing = selectedDrink[`strIngredient${i + 1}`];
+          const meas = selectedDrink[`strMeasure${i + 1}`];
+          return ing ? `${meas ? meas : ""} ${ing}`.trim() : null;
+        })
+        .filter(Boolean)
+        .join(", ");
+
+        await axios.post(`/api/cabinet/${recipeId}`, {
+          id: selectedDrink.idDrink,
+          title: selectedDrink.strDrink,
+          instructions: selectedDrink.strInstructions,
+          ingredients: ingredientsString,
+          image_url: selectedDrink.strDrinkThumb,
+          category: selectedDrink.strCategory,
+        });
+
+        alert("Saved to Cabinet!");
+        handleCloseDialog();
+        return;
+      }
+
+      // If DB recipe
+      if (selectedDbRecipe) {
+        await axios.post(`/api/cabinet/${selectedDbRecipe.id}`);
+        alert("Saved to Cabinet!");
+        handleCloseDialog();
+        return;
+      }
+
+      alert("Nothing selected.");
     } catch (err: any) {
       alert("Could not save recipe.");
     }
@@ -130,7 +145,15 @@ function DrinkSearch() {
   const combinedResults: SearchItem[] = [
     ...dbRecipes.map((r) => ({ source: "db" as const, ...r })),
     ...drinks.map((d) => ({ source: "api" as const, ...d })),
-  ].sort((a, b) => {
+  ]
+  .filter((item, index, arr) => {
+    const id = item.source === "db" ? item.id : item.idDrink;
+    return (
+      arr.findIndex((x) => (x.source === "db" ? x.id : x.idDrink) === id) ===
+      index
+    );
+  })
+  .sort((a, b) => {
     const nameA = a.source === "db" ? a.title : a.strDrink;
     const nameB = b.source === "db" ? b.title : b.strDrink;
     return nameA.localeCompare(nameB);
@@ -190,7 +213,6 @@ function DrinkSearch() {
               <Typography variant="h6">{title}</Typography>
               <Typography variant="body2" color="textSecondary">
                 {category ? category : ""}
-                {item.source === "db" ? " (Saved)" : ""}
               </Typography>
             </CardContent>
             <Box sx={{ p: 2, pt: 0 }}>
@@ -250,7 +272,7 @@ function DrinkSearch() {
               <Button 
               variant="contained" 
               color="primary" 
-              onClick={handleSave}
+              onClick={handleSaveToCabinet}
               >
                 Save to My Cabinet
               </Button>
@@ -294,6 +316,13 @@ function DrinkSearch() {
 
             <DialogActions>
               <Button onClick={handleCloseDialog}>Close</Button>
+              <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleSaveToCabinet}
+              >
+                Save to My Cabinet
+              </Button>
             </DialogActions>
           </>
         )}

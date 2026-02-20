@@ -244,7 +244,7 @@ app.get("/api/cabinet", async (req, res) => {
 
   try {
     const recipes = await db.all(
-      `SELECT r.* FROM recipes r JOIN saved_recipes s ON s.recipe_id = r.id WHERE s.username = ? ORDER BY s.saved_at DESC`, [username]
+      `SELECT r.*, s.saved_at FROM recipes r JOIN saved_recipes s ON s.recipe_id = r.id WHERE s.username = ? ORDER BY s.saved_at DESC`, [username]
     );
 
     res.json({ recipes });

@@ -16,6 +16,18 @@ interface Drink {
   [key: string]: any; 
 }
 
+interface RecipeDB {
+  id: string;
+  title: string;
+  instructions?: string;
+  ingredients?: string;
+  image_url?: string;
+  category?: string;
+  created_by?: string;
+}
+
+type SearchItem = ({ source: "api" } & Drink) | ({ source: "db" } & RecipeDB);
+
 function DrinkSearch() {
   const [searchTerm, setSearchTerm] = useState("");
   const [drinks, setDrinks] = useState<Drink[]>([]);
@@ -25,16 +37,25 @@ function DrinkSearch() {
   // 's' for name (search), 'i' for ingredient (filter)
   const [searchType, setSearchType] = useState<"s" | "i">("s");
 
+  const [dbRecipes, setDbRecipes] = useState<RecipeDB[]>([]);
+  const [selectedDbRecipe, setSelectedDbRecipe] = useState<RecipeDB | null>(null);
+
   const handleSearch = async () => {
     if (!searchTerm) return;
+
     try {
       // API uses 'search.php' for names and 'filter.php' for ingredients
       const endpoint = searchType === "s" ? "search.php?s=" : "filter.php?i=";
-      const response = await axios.get(
-        `https://www.thecocktaildb.com/api/json/v1/1/${endpoint}${searchTerm}`,
-        { withCredentials: false }
-      );
-      setDrinks(response.data.drinks || []);
+
+      const apiResponse = await axios.get(`https://www.thecocktaildb.com/api/json/v1/1/${endpoint}${searchTerm}`,{ withCredentials: false });
+      const dbResponse = await axios.get<{ recipes: RecipeDB[] }>(`/api/recipes/search?q=${encodeURIComponent(searchTerm)}&type=${searchType}`);
+
+      // const response = await axios.get(
+      //   `https://www.thecocktaildb.com/api/json/v1/1/${endpoint}${searchTerm}`,
+      //   { withCredentials: false }
+      // );
+      setDrinks(apiResponse.data.drinks || []);
+      setDbRecipes(dbResponse.data.recipes || []);
     } catch (error) {
       console.error("Search failed", error);
     }
@@ -47,6 +68,7 @@ function DrinkSearch() {
     if (newType !== null) {
       setSearchType(newType);
       setDrinks([]); // Clear results when switching modes
+      setDbRecipes([]);
     }
   };
 
@@ -56,6 +78,7 @@ function DrinkSearch() {
         `https://www.thecocktaildb.com/api/json/v1/1/lookup.php?i=${id}`,
         { withCredentials: false }
       );
+      setSelectedDbRecipe(null);
       setSelectedDrink(response.data.drinks[0]);
       setOpen(true);
     } catch (error) {
@@ -63,34 +86,79 @@ function DrinkSearch() {
     }
   };
 
-  const handleSave = async () => {
-  if (!selectedDrink) return;
+  const handleViewDbRecipe = (recipe: RecipeDB) => {
+    setSelectedDbRecipe(recipe);
+    setSelectedDrink(null);
+    setOpen(true);
+  };
 
-  // Transform API ingredients into a single readable string for your database
-  const ingredientsString = Array.from({ length: 15 })
-    .map((_, i) => {
-      const ing = selectedDrink[`strIngredient${i + 1}`];
-      const meas = selectedDrink[`strMeasure${i + 1}`];
-      return ing ? `${meas ? meas : ""} ${ing}`.trim() : null;
-    })
-    .filter(Boolean)
-    .join(", ");
+  const handleSaveToCabinet = async () => {
+    try {
+      // If API recipe
+      if (selectedDrink) {
+        let recipeId = selectedDrink.idDrink;
 
-  try {
-    await axios.post("/api/recipes", {
-      id: selectedDrink.idDrink,
-      title: selectedDrink.strDrink,
-      instructions: selectedDrink.strInstructions,
-      ingredients: ingredientsString,
-      image_url: selectedDrink.strDrinkThumb,
-      category: selectedDrink.strCategory,
-    });
-    alert("Saved to Cabinet!"); // This will now work for everyone
+        // Transform API ingredients into a single readable string for your database
+        const ingredientsString = Array.from({ length: 15 })
+        .map((_, i) => {
+          const ing = selectedDrink[`strIngredient${i + 1}`];
+          const meas = selectedDrink[`strMeasure${i + 1}`];
+          return ing ? `${meas ? meas : ""} ${ing}`.trim() : null;
+        })
+        .filter(Boolean)
+        .join(", ");
+
+        await axios.post(`/api/cabinet/${recipeId}`, {
+          id: selectedDrink.idDrink,
+          title: selectedDrink.strDrink,
+          instructions: selectedDrink.strInstructions,
+          ingredients: ingredientsString,
+          image_url: selectedDrink.strDrinkThumb,
+          category: selectedDrink.strCategory,
+        });
+
+        alert("Saved to Cabinet!");
+        handleCloseDialog();
+        return;
+      }
+
+      // If DB recipe
+      if (selectedDbRecipe) {
+        await axios.post(`/api/cabinet/${selectedDbRecipe.id}`);
+        alert("Saved to Cabinet!");
+        handleCloseDialog();
+        return;
+      }
+
+      alert("Nothing selected.");
+    } catch (err: any) {
+      alert("Could not save recipe.");
+    }
+  };
+
+  const handleCloseDialog = () => {
     setOpen(false);
-  } catch (err: any) {
-    alert("Could not save recipe.");
-  }
-};
+    setSelectedDrink(null);
+    setSelectedDbRecipe(null);
+  };
+
+  const combinedResults: SearchItem[] = [
+    ...dbRecipes.map((r) => ({ source: "db" as const, ...r })),
+    ...drinks.map((d) => ({ source: "api" as const, ...d })),
+  ]
+  .filter((item, index, arr) => {
+    const id = item.source === "db" ? item.id : item.idDrink;
+    return (
+      arr.findIndex((x) => (x.source === "db" ? x.id : x.idDrink) === id) ===
+      index
+    );
+  })
+  .sort((a, b) => {
+    const nameA = a.source === "db" ? a.title : a.strDrink;
+    const nameB = b.source === "db" ? b.title : b.strDrink;
+    return nameA.localeCompare(nameB);
+  });
+
 
   return (
     <Box sx={{ p: 3 }}>
@@ -128,18 +196,23 @@ function DrinkSearch() {
           gap: 3 
         }}
       >
-        {drinks.map((drink) => (
-          <Card key={drink.idDrink} sx={{ display: 'flex', flexDirection: 'column' }}>
+        {combinedResults.map((item) => {
+          const key = item.source === "db" ? `db-${item.id}` : item.idDrink;
+          const title = item.source === "db" ? item.title : item.strDrink;
+          const category = item.source === "db" ? item.category : item.strCategory;
+          const image = item.source === "db" ? (item.image_url || "https://via.placeholder.com/400x200?text=Recipe") : item.strDrinkThumb;
+          return (
+            <Card key={key} sx={{ display: 'flex', flexDirection: 'column' }}>
             <CardMedia
               component="img"
               height="200"
-              image={drink.strDrinkThumb}
-              alt={drink.strDrink}
+              image={image}
+              alt={title}
             />
             <CardContent sx={{ flexGrow: 1 }}>
-              <Typography variant="h6">{drink.strDrink}</Typography>
+              <Typography variant="h6">{title}</Typography>
               <Typography variant="body2" color="textSecondary">
-                {drink.strCategory}
+                {category ? category : ""}
               </Typography>
             </CardContent>
             <Box sx={{ p: 2, pt: 0 }}>
@@ -147,17 +220,29 @@ function DrinkSearch() {
                 size="small" 
                 variant="outlined" 
                 fullWidth 
-                onClick={() => handleViewRecipe(drink.idDrink)}
+                onClick={() => {
+                  if (item.source === "db") {
+                    handleViewDbRecipe(item);
+                  } else {
+                    handleViewRecipe(item.idDrink);
+                  }
+                }}
               >
                 View Recipe
               </Button>
             </Box>
           </Card>
-        ))}
+          );
+        })}
       </Box>
 
       {/* --- RECIPE MODAL --- */}
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+      open={open} 
+      onClose={handleCloseDialog} 
+      maxWidth="sm" 
+      fullWidth
+      >
         {selectedDrink && (
           <>
             <DialogTitle sx={{ fontWeight: 'bold' }}>{selectedDrink.strDrink}</DialogTitle>
@@ -182,17 +267,63 @@ function DrinkSearch() {
               <Typography variant="body1">{selectedDrink.strInstructions}</Typography>
             </DialogContent>
             <DialogActions>
-  <Button onClick={() => setOpen(false)}>Close</Button>
-  
-  {/* Link the button to the handleSave function */}
-  <Button 
-    variant="contained" 
-    color="primary" 
-    onClick={handleSave}
-  >
-    Save to My Cabinet
-  </Button>
-</DialogActions>
+              <Button onClick={handleCloseDialog}>Close</Button>
+              {/* Link the button to the handleSave function */}
+              <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleSaveToCabinet}
+              >
+                Save to My Cabinet
+              </Button>
+            </DialogActions>
+          </>
+        )}
+
+        {selectedDbRecipe && (
+          <>
+            <DialogTitle sx={{ fontWeight: "bold" }}>{selectedDbRecipe.title}</DialogTitle>
+
+            <DialogContent dividers>
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                  Ingredients
+                </Typography>
+
+                <List dense>
+                  {(selectedDbRecipe.ingredients || "")
+                    .split(",")
+                    .map((x) => x.trim())
+                    .filter(Boolean)
+                    .map((ing, i) => (
+                      <ListItem key={i} sx={{ py: 0 }}>
+                        <ListItemText primary={ing} />
+                      </ListItem>
+                    ))}
+                </List>
+              </Box>
+
+              <Divider sx={{ mb: 2 }} />
+
+              <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                Instructions
+              </Typography>
+
+              <Typography variant="body1">
+                {selectedDbRecipe.instructions || "No instructions provided."}
+              </Typography>
+            </DialogContent>
+
+            <DialogActions>
+              <Button onClick={handleCloseDialog}>Close</Button>
+              <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleSaveToCabinet}
+              >
+                Save to My Cabinet
+              </Button>
+            </DialogActions>
           </>
         )}
       </Dialog>

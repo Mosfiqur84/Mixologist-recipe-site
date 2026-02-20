@@ -120,6 +120,35 @@ app.delete("/api/recipes/:id", async (req, res) => {
   }
 });
 
+app.get("/api/recipes/search", async (req, res) => {
+  try {
+    const searchQuery = String(req.query.q || "").trim();
+
+    // Frontend already uses "s" (name) and "i" (ingredient),
+    // matching TheCocktailDB API, so we keep that here.
+    const searchType = String(req.query.type || "s");
+
+    if (!searchQuery) {
+      return res.json({ recipes: [] });
+    }
+
+    const searchPattern = `%${searchQuery}%`;
+
+    let recipes;
+
+    if (searchType === "i") {
+      recipes = await db.all("SELECT * FROM recipes WHERE ingredients LIKE ? ORDER BY title ASC", [searchPattern]);
+    } else {
+      recipes = await db.all("SELECT * FROM recipes WHERE title LIKE ? ORDER BY title ASC", [searchPattern]);
+    }
+
+    res.json({ recipes });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database search failed" });
+  }
+});
+
 
 
 
@@ -173,6 +202,59 @@ app.post("/api/logout", (req, res) => {
   res.clearCookie("token");
   res.json({ message: "Logged out" });
 });
+
+app.post("/api/cabinet/:id", async (req, res) => {
+  let username = await getLoggedInUser(req);
+  if (!username) {
+    return res.status(401).json({ error: "Login required." });
+  }
+
+  let recipeId = req.params.id;
+
+  try {
+    const { title, instructions, ingredients, image_url, category } = req.body || {};
+
+    if (title) {
+      await db.run(
+        `INSERT OR IGNORE INTO recipes (id, title, instructions, ingredients, image_url, category, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [recipeId, title, instructions ?? null, ingredients ?? null, image_url ?? null, category ?? null, null]
+      );
+    }
+
+    const exists = await db.get("SELECT id FROM recipes WHERE id = ?", [recipeId]);
+    if (!exists) {
+      return res.status(404).json({ error: "Recipe not found." });
+    }
+
+    await db.run("INSERT OR IGNORE INTO saved_recipes (username, recipe_id) VALUES (?, ?)", [username, recipeId]);
+
+    res.json({ message: "Saved to cabinet." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to save." });
+  }
+});
+
+app.get("/api/cabinet", async (req, res) => {
+  const username = await getLoggedInUser(req);
+  if (!username) {
+    return res.status(401).json({ error: "Login required." });
+  }
+
+  try {
+    const recipes = await db.all(
+      `SELECT r.*, s.saved_at FROM recipes r JOIN saved_recipes s ON s.recipe_id = r.id WHERE s.username = ? ORDER BY s.saved_at DESC`, [username]
+    );
+
+    res.json({ recipes });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to load cabinet." });
+  }
+});
+
+
 
 
 let port = 3000;

@@ -255,6 +255,60 @@ app.get("/api/cabinet", async (req, res) => {
 });
 
 
+app.post("/api/favorites/:id", async (req, res) => {
+  const username = await getLoggedInUser(req);
+  if (!username) return res.status(401).json({ error: "Login required." });
+
+  const recipeId = req.params.id;
+  const { title, instructions, ingredients, image_url, category } = req.body || {};
+
+  try {
+    if (title) {
+      await db.run(
+        `INSERT OR IGNORE INTO recipes (id, title, instructions, ingredients, image_url, category, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [recipeId, title, instructions ?? null, ingredients ?? null, image_url ?? null, category ?? null, null]
+      );
+    }
+    await db.run(
+      "INSERT OR IGNORE INTO saved_recipes (username, recipe_id) VALUES (?, ?)",
+      [username, recipeId]
+    );
+    res.json({ message: "Added to favorites." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to favorite." });
+  }
+});
+
+app.delete("/api/favorites/:id", async (req, res) => {
+  const username = await getLoggedInUser(req);
+  if (!username) return res.status(401).json({ error: "Login required." });
+
+  try {
+    await db.run(
+      "DELETE FROM saved_recipes WHERE username = ? AND recipe_id = ?",
+      [username, req.params.id]
+    );
+    res.json({ message: "Removed from favorites." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to unfavorite." });
+  }
+});
+
+app.get("/api/favorites/:id", async (req, res) => {
+  const username = await getLoggedInUser(req);
+  if (!username) return res.json({ favorited: false });
+
+  try {
+    const row = await db.get(
+      "SELECT * FROM saved_recipes WHERE username = ? AND recipe_id = ?",
+      [username, req.params.id]
+    );
+    res.json({ favorited: !!row });
+  } catch (err) {
+    res.status(500).json({ error: "Database error." });
+  }
+});
 
 
 let port = 3000;

@@ -40,7 +40,18 @@ function RecipeDetail({ user }: { user: string | null }) {
         setLoading(false);
       }
     };
+
+    let checkFavorited = async () => {
+      try {
+        let res = await axios.get(`/api/favorites/${id}`, { withCredentials: true });
+        setFavorited(res.data.favorited);
+      } catch (err) {
+        // not logged in, just leave as false
+      }
+    };
+
     fetchDrink();
+    checkFavorited();
   }, [id]);
 
   let ingredients = drink
@@ -52,9 +63,25 @@ function RecipeDetail({ user }: { user: string | null }) {
         .filter((x) => x.ingredient)
     : [];
 
-  let handleFavorite = () => {
+  let handleFavorite = async () => {
     if (!user) { navigate("/login"); return; }
-    setFavorited((prev) => !prev);
+    try {
+      if (favorited) {
+        await axios.delete(`/api/favorites/${id}`, { withCredentials: true });
+        setFavorited(false);
+      } else {
+        await axios.post(`/api/favorites/${id}`, {
+          title: drink?.strDrink,
+          instructions: drink?.strInstructions,
+          ingredients: ingredients.map(i => `${i.measure || ""} ${i.ingredient}`).join(", "),
+          image_url: drink?.strDrinkThumb,
+          category: drink?.strCategory,
+        }, { withCredentials: true });
+        setFavorited(true);
+      }
+    } catch (err) {
+      console.error("Failed to toggle favorite", err);
+    }
   };
 
   let handleRemix = () => {

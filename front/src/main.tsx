@@ -49,7 +49,7 @@ function App() {
             path="add"
             element={
               <ProtectedRoute user={user ?? null}>
-                <AddForms />
+                <AddForms user={user ?? null} />
               </ProtectedRoute>
             }
           />

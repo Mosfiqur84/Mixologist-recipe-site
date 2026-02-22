@@ -22,3 +22,12 @@ CREATE TABLE saved_recipes (
   FOREIGN KEY (username) REFERENCES users(username),
   FOREIGN KEY (recipe_id) REFERENCES recipes(id)
 );
+
+CREATE TABLE comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  recipe_id TEXT NOT NULL,
+  username TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (username) REFERENCES users(username)
+);

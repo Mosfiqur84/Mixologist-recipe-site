@@ -1,162 +1,94 @@
 import { useState } from "react";
 import axios from "axios";
-import { 
-  Box, TextField, Button, Typography, Paper, Alert, Stack 
+import {
+  Box, TextField, Button, Typography, Paper, Alert, Stack
 } from "@mui/material";
 
-function AddForms() {
-  const [authorId, setAuthorId] = useState("");
-  const [authorName, setAuthorName] = useState("");
-  const [authorBio, setAuthorBio] = useState("");
-  
-  const [bookId, setBookId] = useState("");
-  const [bookAuthorId, setBookAuthorId] = useState("");
-  const [bookTitle, setBookTitle] = useState("");
-  const [bookYear, setBookYear] = useState("");
-  const [bookGenre, setBookGenre] = useState("");
-
+function AddForms({ user }: { user: string | null }) {
+  const [title, setTitle] = useState("");
+  const [ingredients, setIngredients] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [category, setCategory] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const handleError = (err: any) => {
-    console.error(err);
-    if (err.response?.data?.errors) {
-      setErrorMsg("Validation Error: " + err.response.data.errors.join(", "));
-    } else if (err.response?.data?.error) {
-      setErrorMsg("Error: " + err.response.data.error);
-    } else {
-      setErrorMsg("An unexpected error occurred.");
-    }
-  };
-
-  const handleAddAuthor = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
     try {
-      await axios.post("/api/authors", { id: authorId, name: authorName, bio: authorBio });
-      setSuccessMsg("Author added successfully!");
-      setAuthorId(""); setAuthorName(""); setAuthorBio(""); 
+      const id = `user_${Date.now()}`;
+      await axios.post("/api/recipes", {
+        id,
+        title,
+        ingredients,
+        instructions,
+        image_url: imageUrl,
+        category,
+      }, { withCredentials: true });
+      setSuccessMsg("Recipe created successfully!");
+      setTitle(""); setIngredients(""); setInstructions(""); setImageUrl(""); setCategory("");
     } catch (err: any) {
-      handleError(err);
+      setErrorMsg(err.response?.data?.error || "Something went wrong.");
     }
   };
 
-  const handleAddBook = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg("");
-    setSuccessMsg("");
-    try {
-      await axios.post("/api/books", { 
-        id: bookId, author_id: bookAuthorId, title: bookTitle, pub_year: bookYear, genre: bookGenre 
-      });
-      setSuccessMsg("Book added successfully!");
-      setBookId(""); setBookTitle(""); setBookYear(""); setBookGenre(""); 
-    } catch (err: any) {
-      handleError(err);
-    }
-  };
+  if (!user) {
+    return (
+      <Box sx={{ pt: 4 }}>
+        <Alert severity="warning">You must be logged in to create a recipe.</Alert>
+      </Box>
+    );
+  }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      
-      {errorMsg && <Alert severity="error">{errorMsg}</Alert>}
-      {successMsg && <Alert severity="success">{successMsg}</Alert>}
+    <Box sx={{ pt: 4 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        <Typography variant="h5" gutterBottom fontWeight={700}>Create Your Own Recipe</Typography>
 
-      {/* AUTHOR FORM */}
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <Typography variant="h5" gutterBottom>Add New Author</Typography>
-        <Box component="form" onSubmit={handleAddAuthor} sx={{ mt: 2 }}>
-          {/* Stack creates vertical spacing between rows */}
-          <Stack spacing={2}>
-            
-            {/* Row 1: ID and Name side-by-side */}
-            <Box sx={{ display: "flex", gap: 2, flexDirection: { xs: "column", sm: "row" } }}>
-              <TextField 
-                label="Author ID" 
-                value={authorId} 
-                onChange={e => setAuthorId(e.target.value)} 
-                required 
-                sx={{ flex: 1 }} 
-              />
-              <TextField 
-                label="Name" 
-                value={authorName} 
-                onChange={e => setAuthorName(e.target.value)} 
-                required 
-                sx={{ flex: 2 }} 
-              />
-            </Box>
+        {errorMsg && <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>}
+        {successMsg && <Alert severity="success" sx={{ mb: 2 }}>{successMsg}</Alert>}
 
-            {/* Row 2: Bio */}
-            <TextField 
-              fullWidth 
-              multiline 
-              rows={2} 
-              label="Bio" 
-              value={authorBio} 
-              onChange={e => setAuthorBio(e.target.value)} 
+        <Box component="form" onSubmit={handleSubmit}>
+          <Stack spacing={3}>
+            <TextField
+              label="Recipe Name"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              required
+              fullWidth
             />
-
-            <Button type="submit" variant="contained" color="primary" sx={{ alignSelf: "start" }}>
-              Add Author
-            </Button>
-          </Stack>
-        </Box>
-      </Paper>
-
-      {/* BOOK FORM */}
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <Typography variant="h5" gutterBottom>Add New Book</Typography>
-        <Box component="form" onSubmit={handleAddBook} sx={{ mt: 2 }}>
-          <Stack spacing={2}>
-            
-            {/* Row 1: Book ID and Author ID */}
-            <Box sx={{ display: "flex", gap: 2, flexDirection: { xs: "column", sm: "row" } }}>
-              <TextField 
-                label="Book ID" 
-                value={bookId} 
-                onChange={e => setBookId(e.target.value)} 
-                required 
-                sx={{ flex: 1 }} 
-              />
-              <TextField 
-                label="Author ID (Foreign Key)" 
-                value={bookAuthorId} 
-                onChange={e => setBookAuthorId(e.target.value)} 
-                required 
-                sx={{ flex: 1 }} 
-              />
-            </Box>
-
-            {/* Row 2: Title */}
-            <TextField 
-              fullWidth 
-              label="Title" 
-              value={bookTitle} 
-              onChange={e => setBookTitle(e.target.value)} 
-              required 
+            <TextField
+              label="Category (e.g. Cocktail, Shot)"
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+              fullWidth
             />
-
-            {/* Row 3: Year and Genre */}
-            <Box sx={{ display: "flex", gap: 2, flexDirection: { xs: "column", sm: "row" } }}>
-              <TextField 
-                label="Year (YYYY)" 
-                value={bookYear} 
-                onChange={e => setBookYear(e.target.value)} 
-                required 
-                sx={{ flex: 1 }} 
-              />
-              <TextField 
-                label="Genre" 
-                value={bookGenre} 
-                onChange={e => setBookGenre(e.target.value)} 
-                sx={{ flex: 1 }} 
-              />
-            </Box>
-
-            <Button type="submit" variant="contained" color="secondary" sx={{ alignSelf: "start" }}>
-              Add Book
+            <TextField
+              label="Ingredients (e.g. 2oz Vodka, 1oz Lime Juice)"
+              value={ingredients}
+              onChange={e => setIngredients(e.target.value)}
+              multiline
+              rows={3}
+              fullWidth
+            />
+            <TextField
+              label="Instructions"
+              value={instructions}
+              onChange={e => setInstructions(e.target.value)}
+              multiline
+              rows={4}
+              fullWidth
+            />
+            <TextField
+              label="Image URL (optional)"
+              value={imageUrl}
+              onChange={e => setImageUrl(e.target.value)}
+              fullWidth
+            />
+            <Button type="submit" variant="contained" sx={{ bgcolor: "#1a1a2e", color: "#D4AF37", alignSelf: "start", px: 4 }}>
+              Create Recipe
             </Button>
           </Stack>
         </Box>

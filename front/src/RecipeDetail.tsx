@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
-  Box, Typography, Button, Chip, Divider, IconButton, Skeleton,
+  Box, Typography, Button, Chip, Divider, IconButton, Skeleton, TextField,
 } from "@mui/material";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
@@ -25,6 +25,8 @@ function RecipeDetail({ user }: { user: string | null }) {
   let [drink, setDrink] = useState<Drink | null>(null);
   let [loading, setLoading] = useState(true);
   let [favorited, setFavorited] = useState(false);
+  let [comments, setComments] = useState<{id: number, username: string, body: string, created_at: string}[]>([]);
+  let [commentBody, setCommentBody] = useState("");
 
   useEffect(() => {
     let fetchDrink = async () => {
@@ -40,7 +42,19 @@ function RecipeDetail({ user }: { user: string | null }) {
         setLoading(false);
       }
     };
+
+    let checkFavorited = async () => {
+      try {
+        let res = await axios.get(`/api/favorites/${id}`, { withCredentials: true });
+        setFavorited(res.data.favorited);
+      } catch (err) {
+        // not logged in, just leave as false
+      }
+    };
+
     fetchDrink();
+    checkFavorited();
+    fetchComments();
   }, [id]);
 
   let ingredients = drink
@@ -52,10 +66,48 @@ function RecipeDetail({ user }: { user: string | null }) {
         .filter((x) => x.ingredient)
     : [];
 
-  let handleFavorite = () => {
+  let handleFavorite = async () => {
     if (!user) { navigate("/login"); return; }
-    setFavorited((prev) => !prev);
+    try {
+      if (favorited) {
+        await axios.delete(`/api/favorites/${id}`, { withCredentials: true });
+        setFavorited(false);
+      } else {
+        await axios.post(`/api/favorites/${id}`, {
+          title: drink?.strDrink,
+          instructions: drink?.strInstructions,
+          ingredients: ingredients.map(i => `${i.measure || ""} ${i.ingredient}`).join(", "),
+          image_url: drink?.strDrinkThumb,
+          category: drink?.strCategory,
+        }, { withCredentials: true });
+        setFavorited(true);
+      }
+    } catch (err) {
+      console.error("Failed to toggle favorite", err);
+    }
   };
+
+  let fetchComments = async () => {
+    try {
+      let res = await axios.get(`/api/comments/${id}`, { withCredentials: true });
+      setComments(res.data.comments);
+    } catch (err) {
+      console.error("Failed to load comments", err);
+    }
+  };
+
+  let handleComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) { navigate("/login"); return; }
+    try {
+      await axios.post(`/api/comments/${id}`, { body: commentBody }, { withCredentials: true });
+      setCommentBody("");
+      fetchComments();
+    } catch (err) {
+      console.error("Failed to post comment", err);
+    }
+  };
+
 
   let handleRemix = () => {
     if (!user) { navigate("/login"); return; }
@@ -258,6 +310,41 @@ function RecipeDetail({ user }: { user: string | null }) {
             {drink.strInstructions}
           </Typography>
         </Box>
+      </Box>
+
+      {/* COMMENTS SECTION */}
+      <Box sx={{ mt: 6 }}>
+        <Typography sx={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, mb: 3, pb: 1.5, borderBottom: "2px solid #D4AF37", display: "inline-block" }}>
+          Comments
+        </Typography>
+        {comments.length === 0 && (
+          <Typography sx={{ color: "#888", mb: 3 }}>No comments yet. Be the first!</Typography>
+        )}
+        {comments.map((c) => (
+          <Box key={c.id} sx={{ mb: 2, p: 2, border: "1px solid #e8e8e8" }}>
+            <Typography sx={{ fontWeight: 700, fontSize: "0.9rem" }}>{c.username}</Typography>
+            <Typography sx={{ color: "#444", fontSize: "0.95rem" }}>{c.body}</Typography>
+            <Typography sx={{ color: "#aaa", fontSize: "0.75rem", mt: 0.5 }}>{c.created_at}</Typography>
+          </Box>
+        ))}
+        {user ? (
+          <Box component="form" onSubmit={handleComment} sx={{ mt: 3, display: "flex", gap: 2 }}>
+            <TextField
+              fullWidth
+              placeholder="Leave a comment..."
+              value={commentBody}
+              onChange={e => setCommentBody(e.target.value)}
+              size="small"
+            />
+            <Button type="submit" variant="contained" sx={{ bgcolor: "#1a1a2e", color: "#D4AF37", borderRadius: 0, px: 3 }}>
+              Post
+            </Button>
+          </Box>
+        ) : (
+          <Typography sx={{ color: "#aaa", fontSize: "0.85rem", mt: 2 }}>
+            Sign in to leave a comment.
+          </Typography>
+        )}
       </Box>
     </Box>
   );

@@ -8,7 +8,7 @@ import MyCabinet from "./MyCabinet";
 import DrinkSearch from "./DrinkSearch";
 import RecipeDetail from "./RecipeDetail";
 import AddForms from "./AddForms";
-import EditBook from "./EditBook";
+import EditRecipe from "./EditRecipe";
 import axios from "axios";
 axios.defaults.withCredentials = true;
 
@@ -57,7 +57,7 @@ function App() {
             path="edit/:id"
             element={
               <ProtectedRoute user={user ?? null}>
-                <EditBook />
+                <EditRecipe />
               </ProtectedRoute>
             }
           />

@@ -29,6 +29,5 @@ CREATE TABLE comments (
   username TEXT NOT NULL,
   body TEXT NOT NULL,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (recipe_id) REFERENCES recipes(id),
   FOREIGN KEY (username) REFERENCES users(username)
 );

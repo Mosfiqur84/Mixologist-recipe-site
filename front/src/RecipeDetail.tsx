@@ -311,6 +311,41 @@ function RecipeDetail({ user }: { user: string | null }) {
           </Typography>
         </Box>
       </Box>
+
+      {/* COMMENTS SECTION */}
+      <Box sx={{ mt: 6 }}>
+        <Typography sx={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", fontWeight: 700, mb: 3, pb: 1.5, borderBottom: "2px solid #D4AF37", display: "inline-block" }}>
+          Comments
+        </Typography>
+        {comments.length === 0 && (
+          <Typography sx={{ color: "#888", mb: 3 }}>No comments yet. Be the first!</Typography>
+        )}
+        {comments.map((c) => (
+          <Box key={c.id} sx={{ mb: 2, p: 2, border: "1px solid #e8e8e8" }}>
+            <Typography sx={{ fontWeight: 700, fontSize: "0.9rem" }}>{c.username}</Typography>
+            <Typography sx={{ color: "#444", fontSize: "0.95rem" }}>{c.body}</Typography>
+            <Typography sx={{ color: "#aaa", fontSize: "0.75rem", mt: 0.5 }}>{c.created_at}</Typography>
+          </Box>
+        ))}
+        {user ? (
+          <Box component="form" onSubmit={handleComment} sx={{ mt: 3, display: "flex", gap: 2 }}>
+            <TextField
+              fullWidth
+              placeholder="Leave a comment..."
+              value={commentBody}
+              onChange={e => setCommentBody(e.target.value)}
+              size="small"
+            />
+            <Button type="submit" variant="contained" sx={{ bgcolor: "#1a1a2e", color: "#D4AF37", borderRadius: 0, px: 3 }}>
+              Post
+            </Button>
+          </Box>
+        ) : (
+          <Typography sx={{ color: "#aaa", fontSize: "0.85rem", mt: 2 }}>
+            Sign in to leave a comment.
+          </Typography>
+        )}
+      </Box>
     </Box>
   );
 }

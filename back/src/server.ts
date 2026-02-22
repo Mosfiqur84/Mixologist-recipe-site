@@ -339,6 +339,7 @@ app.post("/api/comments/:recipeId", async (req, res) => {
     );
     res.status(201).json({ message: "Comment added." });
   } catch (err) {
+    console.error("Comment error:", err);
     res.status(500).json({ error: "Failed to add comment." });
   }
 });

@@ -36,8 +36,8 @@ function MyCabinet({ user }: { user: string | null }) {
     if (!user) return;
 
     //user's recipes
-    axios.get("/api/books").then((res) => {
-      let all: Recipe[] = res.data.books || [];
+    axios.get("/api/recipes").then((res) => {
+      let all: Recipe[] = res.data.recipes || [];
       setOwnRecipes(all.filter((b) => b.created_by === user));
     });
 

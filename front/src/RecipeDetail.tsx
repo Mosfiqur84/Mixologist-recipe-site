@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
-  Box, Typography, Button, Chip, Divider, IconButton, Skeleton,
+  Box, Typography, Button, Chip, Divider, IconButton, Skeleton, TextField,
 } from "@mui/material";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
@@ -25,6 +25,8 @@ function RecipeDetail({ user }: { user: string | null }) {
   let [drink, setDrink] = useState<Drink | null>(null);
   let [loading, setLoading] = useState(true);
   let [favorited, setFavorited] = useState(false);
+  let [comments, setComments] = useState<{id: number, username: string, body: string, created_at: string}[]>([]);
+  let [commentBody, setCommentBody] = useState("");
 
   useEffect(() => {
     let fetchDrink = async () => {
@@ -52,6 +54,7 @@ function RecipeDetail({ user }: { user: string | null }) {
 
     fetchDrink();
     checkFavorited();
+    fetchComments();
   }, [id]);
 
   let ingredients = drink
@@ -83,6 +86,28 @@ function RecipeDetail({ user }: { user: string | null }) {
       console.error("Failed to toggle favorite", err);
     }
   };
+
+  let fetchComments = async () => {
+    try {
+      let res = await axios.get(`/api/comments/${id}`, { withCredentials: true });
+      setComments(res.data.comments);
+    } catch (err) {
+      console.error("Failed to load comments", err);
+    }
+  };
+
+  let handleComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) { navigate("/login"); return; }
+    try {
+      await axios.post(`/api/comments/${id}`, { body: commentBody }, { withCredentials: true });
+      setCommentBody("");
+      fetchComments();
+    } catch (err) {
+      console.error("Failed to post comment", err);
+    }
+  };
+
 
   let handleRemix = () => {
     if (!user) { navigate("/login"); return; }

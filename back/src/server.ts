@@ -311,6 +311,39 @@ app.get("/api/favorites/:id", async (req, res) => {
 });
 
 
+app.get("/api/comments/:recipeId", async (req, res) => {
+  try {
+    const comments = await db.all(
+      "SELECT * FROM comments WHERE recipe_id = ? ORDER BY created_at ASC",
+      [req.params.recipeId]
+    );
+    res.json({ comments });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load comments." });
+  }
+});
+
+app.post("/api/comments/:recipeId", async (req, res) => {
+  const username = await getLoggedInUser(req);
+  if (!username) return res.status(401).json({ error: "Login required." });
+
+  const { body } = req.body;
+  if (!body || body.trim().length === 0) {
+    return res.status(400).json({ error: "Comment cannot be empty." });
+  }
+
+  try {
+    await db.run(
+      "INSERT INTO comments (recipe_id, username, body) VALUES (?, ?, ?)",
+      [req.params.recipeId, username, body.trim()]
+    );
+    res.status(201).json({ message: "Comment added." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to add comment." });
+  }
+});
+
+
 let port = 3000;
 let host = "localhost";
 let protocol = "http";

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { 
   TextField, Button, Card, CardMedia, CardContent, Typography, Box, Dialog, 
@@ -33,6 +34,7 @@ function DrinkSearch() {
   const [drinks, setDrinks] = useState<Drink[]>([]);
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   
   // 's' for name (search), 'i' for ingredient (filter)
   const [searchType, setSearchType] = useState<"s" | "i">("s");
@@ -268,6 +270,13 @@ function DrinkSearch() {
             </DialogContent>
             <DialogActions>
               <Button onClick={handleCloseDialog}>Close</Button>
+              <Button 
+    variant="outlined"
+    onClick={() => navigate(`/remix/${selectedDrink.idDrink}`)}
+    sx={{ ml: 1, borderColor: "#D4AF37", color: "#D4AF37" }}
+  >
+    Remix
+  </Button>
               {/* Link the button to the handleSave function */}
               <Button 
               variant="contained" 

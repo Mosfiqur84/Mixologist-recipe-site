@@ -65,6 +65,7 @@ function App() {
             path="login"
             element={user ? <Navigate to="/" replace /> : <Login onLogin={handleLogin} />}
           />
+          <Route path="remix/:id" element={<ProtectedRoute user={user}><EditRecipe /></ProtectedRoute>} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -7,6 +7,7 @@ import {
   DialogActions,
   Dialog,
   DialogTitle,
+  Stack,
 } from "@mui/material";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import AddIcon from "@mui/icons-material/Add";
@@ -31,6 +32,8 @@ function MyCabinet({ user }: { user: string | null }) {
   let [favoriteRecipes, setFavoriteRecipes] = useState<Recipe[]>([]);
   let [openFav, setOpenFav] = useState(false);
   let [selectedFav, setSelectedFav] = useState<Recipe | null>(null);
+  let [remixedRecipes, setRemixedRecipes] = useState<Recipe[]>([]);
+
 
   useEffect(() => {
     if (!user) return;
@@ -38,7 +41,8 @@ function MyCabinet({ user }: { user: string | null }) {
     //user's recipes
     axios.get("/api/recipes").then((res) => {
       let all: Recipe[] = res.data.recipes || [];
-      setOwnRecipes(all.filter((b) => b.created_by === user));
+      setOwnRecipes(all.filter((r) => r.created_by === user && !r.id.startsWith("remix_")));
+      setRemixedRecipes(all.filter((r) => r.created_by === user && r.id.startsWith("remix_")));
     });
 
     // favorites (cabinet)
@@ -118,6 +122,7 @@ function MyCabinet({ user }: { user: string | null }) {
       >
         <Tab label="Favorites" />
         <Tab label="My Recipes" />
+        <Tab label="Remixed" />
       </Tabs>
       {tab === 0 && (
         <Box>
@@ -210,7 +215,88 @@ function MyCabinet({ user }: { user: string | null }) {
             </Box>
           )}
 
-          {/* Favorites modal */}
+        </Box>
+      )}
+      {/* My Recipes Tab */}
+{tab === 1 && (
+  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "1fr 1fr 1fr" }, gap: 3 }}>
+    {ownRecipes.map((recipe) => (
+      <Card key={recipe.id} elevation={0} sx={{ borderRadius: 0, border: "1px solid #e8e8e8" }}>
+        <CardMedia component="img" height="180" image={recipe.image_url || "https://via.placeholder.com/180"} />
+        <CardContent sx={{ p: 2 }}>
+  <Typography sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 600, fontSize: "1rem" }}>
+    {recipe.title}
+  </Typography>
+  <Typography variant="body2" sx={{ color: "#888", fontSize: "0.8rem", mb: 2 }}>
+    {recipe.category || "Custom Recipe"}
+  </Typography>
+
+  <Stack spacing={1}>
+    {/* This button opens the modal using the local recipe data */}
+    <Button 
+      variant="outlined" 
+      fullWidth 
+      size="small" 
+      sx={{ borderRadius: 0, borderColor: "#e8e8e8", color: "#1a1a1a" }}
+      onClick={(e) => {
+        e.stopPropagation(); // Prevents navigating to edit if the card has a click listener
+        handleOpenFav(recipe); 
+      }}
+    >
+      View
+    </Button>
+    
+    <Box sx={{ display: 'flex', gap: 1 }}>
+      <Button variant="outlined" fullWidth size="small" onClick={() => navigate(`/edit/${recipe.id}`)}>
+        Edit
+      </Button>
+      <Button variant="outlined" fullWidth size="small" onClick={() => navigate(`/remix/${recipe.id}`)}>
+        Remix
+      </Button>
+    </Box>
+  </Stack>
+</CardContent>
+      </Card>
+    ))}
+  </Box>
+)}
+      {/* Remixed Tab */}
+{tab === 2 && (
+  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "1fr 1fr 1fr" }, gap: 3 }}>
+    {remixedRecipes.map((recipe) => (
+      <Card key={recipe.id} elevation={0} sx={{ borderRadius: 0, border: "1px solid #e8e8e8" }}>
+        <CardMedia component="img" height="180" image={recipe.image_url || "https://via.placeholder.com/180"} />
+        <CardContent sx={{ p: 2 }}>
+          <Typography sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 600, fontSize: "1rem" }}>
+            {recipe.title}
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#D4AF37", fontSize: "0.8rem", fontWeight: 600, mb: 2 }}>
+            Remixed by: {recipe.created_by}
+          </Typography>
+
+          <Stack spacing={1}>
+            <Button 
+              variant="outlined" fullWidth size="small" 
+              sx={{ borderRadius: 0, borderColor: "#e8e8e8", color: "#1a1a1a" }}
+              onClick={() => handleOpenFav(recipe)} // Uses the Favorites-style modal
+            >
+              View
+            </Button>
+            <Button 
+              variant="outlined" fullWidth size="small" sx={{ borderRadius: 0 }}
+              onClick={() => navigate(`/remix/${recipe.id}`)}
+            >
+              Remix
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
+    ))}
+  </Box>
+)}
+
+
+{/* Favorites modal */}
           <Dialog open={openFav} onClose={handleCloseFav} maxWidth="sm" fullWidth>
             {selectedFav && (
               <>
@@ -254,99 +340,6 @@ function MyCabinet({ user }: { user: string | null }) {
               </>
             )}
           </Dialog>
-        </Box>
-      )}
-      {tab === 1 && (
-        <Box>
-          <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 3 }}>
-            <Button
-              startIcon={<AddIcon />}
-              variant="contained"
-              onClick={() => navigate("/add")}
-              sx={{
-                bgcolor: "#1a1a2e",
-                color: "#D4AF37",
-                borderRadius: 0,
-                fontWeight: 700,
-                px: 3,
-                "&:hover": { bgcolor: "#2d1b00" },
-              }}
-            >
-              New Recipe
-            </Button>
-          </Box>
-
-          {ownRecipes.length === 0 ? (
-            <Box sx={{ border: "2px dashed #e8e8e8", p: 6, textAlign: "center" }}>
-              <Typography sx={{ color: "#bbb", mb: 2 }}>
-                You haven't created any recipes yet
-              </Typography>
-              <Button
-                onClick={() => navigate("/add")}
-                sx={{ color: "#D4AF37", fontWeight: 600 }}
-              >
-                Create your first recipe →
-              </Button>
-            </Box>
-          ) : (
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr 1fr", sm: "1fr 1fr 1fr" },
-                gap: 3,
-              }}
-            >
-              {ownRecipes.map((recipe) => (
-                <Card
-                  key={recipe.id}
-                  elevation={0}
-                  sx={{
-                    borderRadius: 0,
-                    border: "1px solid #e8e8e8",
-                    cursor: "pointer",
-                    transition: "transform 0.2s, box-shadow 0.2s",
-                    "&:hover": {
-                      transform: "translateY(-4px)",
-                      boxShadow: "0 12px 32px rgba(0,0,0,0.08)",
-                    },
-                  }}
-                  onClick={() => navigate(`/edit/${recipe.id}`)}
-                >
-                  {recipe.image_url ? (
-                    <CardMedia component="img" height="180" image={recipe.image_url} alt={recipe.title} />
-                  ) : (
-                    <Box
-                      sx={{
-                        height: 180,
-                        bgcolor: "#f5f0e8",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Typography sx={{ color: "#D4AF37", fontFamily: "'Playfair Display', serif", fontSize: "2rem" }}>
-
-                      </Typography>
-                    </Box>
-                  )}
-                  <CardContent sx={{ p: 2 }}>
-                    <Typography
-                      sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 600, fontSize: "1rem" }}
-                    >
-                      {recipe.title}
-                    </Typography>
-                    {recipe.genre && (
-                      <Typography variant="body2" sx={{ color: "#888", fontSize: "0.8rem" }}>
-                        {recipe.genre}
-                      </Typography>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </Box>
-          )}
-        </Box>
-      )}
     </Box>
   );
 }

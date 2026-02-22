@@ -51,7 +51,6 @@ function EditRecipe() {
 
         <Box component="form" onSubmit={handleSave}>
           <Stack spacing={3}>
-            {/* Title Field */}
             <TextField
               label="Recipe Name"
               value={title}
@@ -60,7 +59,6 @@ function EditRecipe() {
               fullWidth
             />
 
-            {/* NEW: Category Field */}
             <TextField
               label="Category (e.g. Cocktail, Shot)"
               value={category}
@@ -68,7 +66,6 @@ function EditRecipe() {
               fullWidth
             />
 
-            {/* Ingredients Field */}
             <TextField
               label="Ingredients"
               value={ingredients}
@@ -78,7 +75,6 @@ function EditRecipe() {
               fullWidth
             />
 
-            {/* Instructions Field */}
             <TextField
               label="Instructions"
               value={instructions}
@@ -88,7 +84,6 @@ function EditRecipe() {
               fullWidth
             />
 
-            {/* NEW: Image URL Field */}
             <TextField
               label="Image URL (optional)"
               value={imageUrl}
@@ -96,7 +91,6 @@ function EditRecipe() {
               fullWidth
             />
 
-            {/* Action Buttons */}
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button 
                 type="submit" 

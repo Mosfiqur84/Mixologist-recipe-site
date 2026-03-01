@@ -41,18 +41,37 @@ function Home({ user }: { user: string | null }) {
       }
     };
     fetchPopular();
-  }, []);
+    if (user) fetchFavorites();
+  }, [user]);
 
-  let toggleFavorite = (id: string) => {
-    if (!user) {
-      navigate("/login");
-      return;
+let fetchFavorites = async () => {
+    try {
+      let res = await axios.get("/api/cabinet", { withCredentials: true });
+      let ids = res.data.recipes.map((r: any) => r.id);
+      setFavorites(new Set(ids));
+    } catch (err) {
+      console.error("Failed to fetch favorites", err);
     }
-    setFavorites((prev) => {
-      let next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  };
+
+
+  let toggleFavorite = async (id: string, drink: Drink) => {
+    if (!user) { navigate("/login"); return; }
+    try {
+      if (favorites.has(id)) {
+        await axios.delete(`/api/favorites/${id}`, { withCredentials: true });
+        setFavorites((prev) => { let next = new Set(prev); next.delete(id); return next; });
+      } else {
+        await axios.post(`/api/favorites/${id}`, {
+          title: drink.strDrink,
+          image_url: drink.strDrinkThumb,
+          category: drink.strCategory,
+        }, { withCredentials: true });
+        setFavorites((prev) => { let next = new Set(prev); next.add(id); return next; });
+      }
+    } catch (err) {
+      console.error("Failed to toggle favorite", err);
+    }
   };
 
   return (
@@ -209,7 +228,7 @@ function Home({ user }: { user: string | null }) {
                   <IconButton
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleFavorite(drink.idDrink);
+                      toggleFavorite(drink.idDrink, drink);
                     }}
                     sx={{
                       position: "absolute",

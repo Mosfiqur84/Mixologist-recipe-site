@@ -321,10 +321,24 @@ function RecipeDetail({ user }: { user: string | null }) {
           <Typography sx={{ color: "#888", mb: 3 }}>No comments yet. Be the first!</Typography>
         )}
         {comments.map((c) => (
-          <Box key={c.id} sx={{ mb: 2, p: 2, border: "1px solid #e8e8e8" }}>
-            <Typography sx={{ fontWeight: 700, fontSize: "0.9rem" }}>{c.username}</Typography>
-            <Typography sx={{ color: "#444", fontSize: "0.95rem" }}>{c.body}</Typography>
-            <Typography sx={{ color: "#aaa", fontSize: "0.75rem", mt: 0.5 }}>{c.created_at}</Typography>
+          <Box key={c.id} sx={{ mb: 2, p: 2, border: "1px solid #e8e8e8", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <Box>
+              <Typography sx={{ fontWeight: 700, fontSize: "0.9rem" }}>{c.username}</Typography>
+              <Typography sx={{ color: "#444", fontSize: "0.95rem" }}>{c.body}</Typography>
+              <Typography sx={{ color: "#aaa", fontSize: "0.75rem", mt: 0.5 }}>{c.created_at}</Typography>
+            </Box>
+            {user === c.username && (
+              <Button
+                size="small"
+                color="error"
+                onClick={async () => {
+                  await axios.delete(`/api/comments/${c.id}`, { withCredentials: true });
+                  fetchComments();
+                }}
+              >
+                Delete
+              </Button>
+            )}
           </Box>
         ))}
         {user ? (

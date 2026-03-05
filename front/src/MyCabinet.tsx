@@ -288,6 +288,14 @@ function MyCabinet({ user }: { user: string | null }) {
             >
               Remix
             </Button>
+            <Button 
+    size="small" 
+    variant="outlined" 
+    color="secondary"
+    onClick={() => navigate(`/history/${recipe.id}`)}
+  >
+    View History
+  </Button>
           </Stack>
         </CardContent>
       </Card>

@@ -11,6 +11,7 @@ interface Recipe {
   instructions: string;
   image_url: string;
   category: string;
+  parentId?: string | null;
 }
 
 function EditRecipe() {
@@ -25,6 +26,7 @@ function EditRecipe() {
     instructions: "",
     image_url: "",
     category: "",
+    parentId: "",
   });
   
   const [loading, setLoading] = useState(true);
@@ -33,81 +35,80 @@ function EditRecipe() {
   const isRemixing = location.pathname.includes("remix");
 
   useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
+  let isMounted = true;
+  setLoading(true);
 
-    const fetchData = async () => {
-      try {
-        // 1. Logic for Remixing from TheCocktailDB
-        if (isRemixing && !id?.startsWith("user_") && !id?.startsWith("remix_")) {
-          const res = await axios.get(`https://www.thecocktaildb.com/api/json/v1/1/lookup.php?i=${id}`, {
-    withCredentials: false 
-  });
-          const drink = res.data.drinks?.[0];
-          
-          if (drink && isMounted) {
-            const ings = Array.from({ length: 15 })
-              .map((_, i) => {
-                const ing = drink[`strIngredient${i + 1}`];
-                const meas = drink[`strMeasure${i + 1}`];
-                return ing ? `${meas ?? ""} ${ing}`.trim() : null;
-              })
-              .filter(Boolean)
-              .join(", ");
-
-            setFormData({
-              title: drink.strDrink,
-              category: drink.strCategory || "",
-              instructions: drink.strInstructions || "",
-              image_url: drink.strDrinkThumb || "",
-              ingredients: ings,
-            });
-          }
-        } 
-        // 2. Logic for Editing existing local recipe
-        else {
-          // Better practice: Fetch specific ID if your API supports it
-          // const res = await axios.get(`/api/recipes/${id}`);
-          const res = await axios.get(`/api/recipes`);
-          const recipe = res.data.recipes.find((r: any) => r.id === id);
-          
-          if (recipe && isMounted) {
-            setFormData({
-              title: recipe.title,
-              ingredients: recipe.ingredients || "",
-              instructions: recipe.instructions || "",
-              image_url: recipe.image_url || "",
-              category: recipe.category || "",
-            });
-          }
-        }
-      } catch (err) {
-        setErrorMsg("Failed to load recipe details.");
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    fetchData();
-    return () => { isMounted = false; };
-  }, [id, isRemixing]);
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const fetchData = async () => {
     try {
-      const finalId = isRemixing ? `remix_${Date.now()}` : id;
-      
-      await axios.post("/api/recipes", {
-        id: finalId,
-        ...formData,
-        image_url: formData.image_url // mapping state name to DB field name
-      });
-      
-      navigate("/cabinet");
+      // Case 1: External API (Initial ID is numeric, like "11007")
+      if (isRemixing && !id?.startsWith("user_") && !id?.startsWith("remix_")) {
+        const res = await axios.get(`https://www.thecocktaildb.com/api/json/v1/1/lookup.php?i=${id}`, { withCredentials: false });
+        const drink = res.data.drinks?.[0];
+
+        if (drink && isMounted) {
+          const ings = Array.from({ length: 15 })
+            .map((_, i) => {
+              const ing = drink[`strIngredient${i + 1}`];
+              const meas = drink[`strMeasure${i + 1}`];
+              return ing ? `${meas ?? ""} ${ing}`.trim() : null;
+            })
+            .filter(Boolean)
+            .join(", ");
+
+          setFormData({
+            title: drink.strDrink,
+            category: drink.strCategory || "",
+            instructions: drink.strInstructions || "",
+            image_url: drink.strDrinkThumb || "",
+            ingredients: ings,
+            parentId: id, // The external ID is the root parent
+          });
+        }
+      } 
+      // Case 2: Local Recipe (Edit or Remix-of-Remix)
+      else {
+        const res = await axios.get(`/api/recipes`);
+        const recipe = res.data.recipes.find((r: any) => r.id === id);
+
+        if (recipe && isMounted) {
+          setFormData({
+            title: recipe.title,
+            ingredients: recipe.ingredients || "",
+            instructions: recipe.instructions || "",
+            image_url: recipe.image_url || "",
+            category: recipe.category || "",
+            parentId: isRemixing ? recipe.id : (recipe.parentId || ""),
+          });
+        }
+      }
     } catch (err) {
-      setErrorMsg("Could not save recipe. Please try again.");
+      setErrorMsg("Failed to load details.");
+    } finally {
+      if (isMounted) setLoading(false);
     }
   };
+
+  fetchData();
+  return () => { isMounted = false; };
+}, [id, isRemixing]);
+
+  const handleSave = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  const finalId = isRemixing ? `remix_${Date.now()}` : id;
+
+  try {
+    await axios.post("/api/recipes", {
+      id: finalId,
+      ...formData,
+      parentId: isRemixing ? id : (formData as any).parentId, 
+    });
+    navigate("/cabinet");
+  } catch (err) {
+    setErrorMsg("Failed to save the remix. Make sure the ID is unique.");
+    console.error(err);
+  }
+};
 
   const handleChange = (field: keyof typeof formData) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [field]: e.target.value });

@@ -161,7 +161,7 @@ app.post("/api/login", async (req, res) => {
 
   if (user && await argon2.verify(user.hashed_password, password)) {
     const token = Math.random().toString(36).substring(2); // Generate unique token 
-    sessions[token] = username; // Store session [cite: 27]
+    sessions[token] = username; 
     
     res.cookie("token", token, { 
     httpOnly: true, 

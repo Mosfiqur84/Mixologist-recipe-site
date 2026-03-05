@@ -289,13 +289,13 @@ function MyCabinet({ user }: { user: string | null }) {
               Remix
             </Button>
             <Button 
-    size="small" 
-    variant="outlined" 
-    color="secondary"
-    onClick={() => navigate(`/history/${recipe.id}`)}
-  >
-    View History
-  </Button>
+  variant="outlined" 
+  size="small" 
+  sx={{ borderColor: "#D4AF37", color: "#1a1a2e" }}
+  onClick={() => navigate(`/history/${recipe.id}`)}
+>
+  History
+</Button>
           </Stack>
         </CardContent>
       </Card>

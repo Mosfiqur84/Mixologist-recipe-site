@@ -9,6 +9,7 @@ import DrinkSearch from "./DrinkSearch";
 import RecipeDetail from "./RecipeDetail";
 import AddForms from "./AddForms";
 import EditRecipe from "./EditRecipe";
+import RecipeHistory from "./RecipeHistory";
 import axios from "axios";
 axios.defaults.withCredentials = true;
 
@@ -45,6 +46,7 @@ function App() {
           <Route path="drinks" element={<DrinkSearch />} />
           <Route path="recipe/:id" element={<RecipeDetail user={user ?? null} />} />
           <Route path="cabinet" element={<MyCabinet user={user ?? null} />} />
+          <Route path="/history/:id" element={<RecipeHistory />} />
           <Route
             path="add"
             element={

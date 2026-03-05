@@ -22,7 +22,7 @@ let app = express();
 app.set('trust proxy', 1);
 app.use(express.static("public"))
 
-app.use(express.json({ limit: "1kb" }));
+app.use(express.json({ limit: "5mb" }));
 app.use(helmet());
 app.use(cookieParser());
 const limiter = rateLimit({
@@ -344,6 +344,21 @@ app.post("/api/comments/:recipeId", async (req, res) => {
   }
 });
 
+app.delete("/api/comments/:commentId", async (req, res) => {
+  const username = await getLoggedInUser(req);
+  if (!username) return res.status(401).json({ error: "Login required." });
+
+  try {
+    const result = await db.run(
+      "DELETE FROM comments WHERE id = ? AND username = ?",
+      [req.params.commentId, username]
+    );
+    if (result.changes === 0) return res.status(403).json({ error: "Unauthorized" });
+    res.json({ message: "Comment deleted." });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete comment." });
+  }
+});
 
 let port = 3000;
 let host = "localhost";

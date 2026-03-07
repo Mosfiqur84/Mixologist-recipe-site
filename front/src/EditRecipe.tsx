@@ -3,7 +3,6 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { Box, TextField, Button, Typography, Paper, Alert, Stack, CircularProgress } from "@mui/material";
 
-// Define a clear interface for your Recipe data
 interface Recipe {
   id: string;
   title: string;
@@ -11,7 +10,7 @@ interface Recipe {
   instructions: string;
   image_url: string;
   category: string;
-  parentId?: string | null;
+  parent_id?: string | null;
 }
 
 function EditRecipe() {
@@ -19,14 +18,13 @@ function EditRecipe() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // State management
   const [formData, setFormData] = useState<Omit<Recipe, 'id'>>({
     title: "",
     ingredients: "",
     instructions: "",
     image_url: "",
     category: "",
-    parentId: "",
+    parent_id: "",
   });
   
   const [loading, setLoading] = useState(true);
@@ -61,11 +59,10 @@ function EditRecipe() {
             instructions: drink.strInstructions || "",
             image_url: drink.strDrinkThumb || "",
             ingredients: ings,
-            parentId: id, // The external ID is the root parent
+            parent_id: id, // The external ID is the root parent
           });
         }
       } 
-      // Case 2: Local Recipe (Edit or Remix-of-Remix)
       else {
         const res = await axios.get(`/api/recipes`);
         const recipe = res.data.recipes.find((r: any) => r.id === id);
@@ -77,7 +74,7 @@ function EditRecipe() {
             instructions: recipe.instructions || "",
             image_url: recipe.image_url || "",
             category: recipe.category || "",
-            parentId: isRemixing ? recipe.id : (recipe.parentId || ""),
+            parent_id: isRemixing ? recipe.id : (recipe.parent_id || ""),
           });
         }
       }
@@ -93,22 +90,25 @@ function EditRecipe() {
 }, [id, isRemixing]);
 
   const handleSave = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  const finalId = isRemixing ? `remix_${Date.now()}` : id;
+      e.preventDefault();
 
-  try {
-    await axios.post("/api/recipes", {
-      id: finalId,
-      ...formData,
-      parentId: isRemixing ? id : (formData as any).parentId, 
-    });
-    navigate("/cabinet");
-  } catch (err) {
-    setErrorMsg("Failed to save the remix. Make sure the ID is unique.");
-    console.error(err);
-  }
-};
+      try {
+        if (isRemixing) {
+          let finalId = `remix_${Date.now()}`;
+          await axios.post("/api/recipes", {
+            id: finalId,
+            ...formData,
+            parent_id: id,
+          }, { withCredentials: true });
+        } else {
+          await axios.put(`/api/recipes/${id}`, formData, { withCredentials: true });
+        }
+        navigate("/cabinet");
+      } catch (err) {
+        setErrorMsg("Failed to save. Please try again.");
+        console.error(err);
+      }
+  };
 
   const handleChange = (field: keyof typeof formData) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [field]: e.target.value });

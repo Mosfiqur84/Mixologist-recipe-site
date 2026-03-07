@@ -325,14 +325,21 @@ function DrinkSearch() {
 
             <DialogActions>
               <Button onClick={handleCloseDialog}>Close</Button>
-              <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={handleSaveToCabinet}
+              <Button
+                variant="outlined"
+                onClick={() => navigate(`/remix/${selectedDbRecipe.id}`)}
+                sx={{ ml: 1, borderColor: "#D4AF37", color: "#D4AF37" }}
+              >
+                Remix
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSaveToCabinet}
               >
                 Save to My Cabinet
               </Button>
-            </DialogActions>
+          </DialogActions>
           </>
         )}
       </Dialog>

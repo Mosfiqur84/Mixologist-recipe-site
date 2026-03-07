@@ -51,18 +51,15 @@ function parseError(zodError: z.ZodError): string[] {
   ];
 }
 
-// --- AUTHORIZATION HELPER ---
-// Checks if a valid session exists for the token in the cookies 
 async function getLoggedInUser(req: express.Request): Promise<string | null> {
   const token = req.cookies.token;
   if (!token || !sessions[token]) {
     return null;
   }
-  return sessions[token]; // Returns the username associated with the token [cite: 28]
+  return sessions[token]; 
 }
 
 
-// Replace bookBodySchema with this:
 const recipeBodySchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Title is required"),
@@ -72,10 +69,17 @@ const recipeBodySchema = z.object({
   category: z.string().optional(),
 });
 
-// Replace the old GET /api/books with this
+interface RecipeRow {
+  id: string;
+  title: string;
+  image_url: string | null;
+  category: string | null;
+  created_by: string | null;
+  parent_id: string | null;
+}
+
 app.get("/api/recipes", async (req, res) => {
   try {
-    // We use "recipes" instead of "books" now
     const recipes = await db.all("SELECT * FROM recipes ORDER BY title ASC");
     res.json({ recipes });
   } catch (err) {
@@ -84,48 +88,11 @@ app.get("/api/recipes", async (req, res) => {
   }
 });
 
-// Update the POST /api/recipes route to use the correct columns
-app.post("/api/recipes", async (req, res) => {
-  // Try to get the user, but don't error out if they are null
-  const username = await getLoggedInUser(req); 
-
-  const { id, title, instructions, ingredients, image_url, category } = req.body;
-  
-  try {
-    await db.run(
-      "INSERT INTO recipes(id, title, instructions, ingredients, image_url, category, created_by) VALUES(?, ?, ?, ?, ?, ?, ?)",
-      [id, title, instructions, ingredients, image_url, category, username || null] // Use null for guests
-    );
-    res.status(201).json({ message: "Recipe saved to the public cabinet!" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "This recipe is already in the cabinet." });
-  }
-});
-
-app.delete("/api/recipes/:id", async (req, res) => {
-  const username = await getLoggedInUser(req);
-  if (!username) return res.status(401).json({ error: "Please login first." });
-
-  try {
-    // Ensure users can only delete their own recipes
-    const result = await db.run(
-      "DELETE FROM recipes WHERE id = ? AND created_by = ?",
-      [req.params.id, username]
-    );
-    if (result.changes === 0) return res.status(403).json({ error: "Unauthorized" });
-    res.json({ message: "Deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ error: "Database error" });
-  }
-});
 
 app.get("/api/recipes/search", async (req, res) => {
   try {
     const searchQuery = String(req.query.q || "").trim();
 
-    // Frontend already uses "s" (name) and "i" (ingredient),
-    // matching TheCocktailDB API, so we keep that here.
     const searchType = String(req.query.type || "s");
 
     if (!searchQuery) {
@@ -149,9 +116,83 @@ app.get("/api/recipes/search", async (req, res) => {
   }
 });
 
+app.post("/api/recipes", async (req, res) => {
+  let username = await getLoggedInUser(req);
 
+  let { id, title, instructions, ingredients, image_url, category, parent_id } = req.body;
 
+  try {
+    await db.run(
+      "INSERT INTO recipes(id, title, instructions, ingredients, image_url, category, created_by, parent_id) VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+      [id, title, instructions, ingredients, image_url, category, username || null, parent_id || null]
+    );
+    res.status(201).json({ message: "Recipe saved!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "This recipe already exists." });
+  }
+});
 
+app.get("/api/recipes/:id/history", async (req, res) => {
+  let { id } = req.params;
+
+  try {
+    let chain: RecipeRow[] = [];
+    let currentId: string | null = id;
+
+    while (currentId) {
+      let recipe: RecipeRow | undefined = await db.get<RecipeRow>(
+        "SELECT id, title, image_url, category, created_by, parent_id FROM recipes WHERE id = ?",
+        [currentId]
+      );
+
+      if (!recipe) break;
+
+      chain.unshift(recipe);
+      currentId = recipe.parent_id;
+    }
+
+    res.json({ chain });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load history." });
+  }
+});
+
+app.put("/api/recipes/:id", async (req, res) => {
+  let username = await getLoggedInUser(req);
+  if (!username) return res.status(401).json({ error: "Please login first." });
+
+  let { title, instructions, ingredients, image_url, category } = req.body;
+
+  try {
+    let result = await db.run(
+      "UPDATE recipes SET title = ?, instructions = ?, ingredients = ?, image_url = ?, category = ? WHERE id = ? AND created_by = ?",
+      [title, instructions, ingredients, image_url, category, req.params.id, username]
+    );
+    if (result.changes === 0) return res.status(403).json({ error: "Unauthorized or recipe not found." });
+    res.json({ message: "Recipe updated." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update recipe." });
+  }
+});
+
+app.delete("/api/recipes/:id", async (req, res) => {
+  const username = await getLoggedInUser(req);
+  if (!username) return res.status(401).json({ error: "Please login first." });
+
+  try {
+    const result = await db.run(
+      "DELETE FROM recipes WHERE id = ? AND created_by = ?",
+      [req.params.id, username]
+    );
+    if (result.changes === 0) return res.status(403).json({ error: "Unauthorized" });
+    res.json({ message: "Deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Database error" });
+  }
+});
 
 
 
@@ -174,7 +215,6 @@ app.post("/api/login", async (req, res) => {
   res.status(401).json({ error: "Invalid credentials" }); // [cite: 6, 15]
 });
 
-// POST /api/register [cite: 7, 29]
 app.post("/api/register", async (req, res) => {
   const { username, password } = req.body;
 

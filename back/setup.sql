@@ -11,6 +11,7 @@ CREATE TABLE recipes (
     image_url TEXT,
     category TEXT,
     created_by TEXT,
+    parent_id TEXT,
     FOREIGN KEY(created_by) REFERENCES users(username)
 );
 

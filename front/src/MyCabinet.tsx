@@ -36,6 +36,7 @@ function MyCabinet({ user }: { user: string | null }) {
 
 
   useEffect(() => {
+    console.log("Cabinet useEffect triggered!")
     if (!user) return;
 
     //user's recipes
@@ -201,14 +202,25 @@ function MyCabinet({ user }: { user: string | null }) {
                       </Typography>
                     )}
 
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      sx={{ mt: 1.5, borderRadius: 0, borderColor: "#e8e8e8", color: "#1a1a1a" }}
-                      onClick={() => handleOpenFav(recipe)}
-                    >
-                      View
-                    </Button>
+
+
+                     <Stack spacing={1}>
+            <Button 
+              variant="outlined" fullWidth size="small" 
+              sx={{ borderRadius: 0, borderColor: "#e8e8e8", color: "#1a1a1a" }}
+              onClick={() => handleOpenFav(recipe)} // Uses the Favorites-style modal
+            >
+              View
+            </Button>
+            <Button 
+              variant="outlined" fullWidth size="small" sx={{ borderRadius: 0 }}
+              onClick={() => navigate(`/remix/${recipe.id}`)}
+            >
+              Remix
+            </Button>
+            
+          </Stack>
+
                   </CardContent>
                 </Card>
               ))}

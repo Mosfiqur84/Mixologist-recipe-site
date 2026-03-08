@@ -30,8 +30,13 @@ function RecipeHistory() {
   useEffect(() => {
     let fetchHistory = async () => {
       try {
-        let res = await axios.get(`/api/recipes/${id}/history`);
-        setChain(res.data.chain || []);
+        let [historyRes, remixRes] = await Promise.all([
+          axios.get(`/api/recipes/${id}/history`),
+          axios.get(`/api/recipes/${id}/remixes`),
+        ]);
+        let chain = historyRes.data.chain || [];
+        let remixes = remixRes.data.remixes || [];
+        setChain([...chain, ...remixes]);
       } catch (err) {
         setError("Could not load recipe history.");
       } finally {

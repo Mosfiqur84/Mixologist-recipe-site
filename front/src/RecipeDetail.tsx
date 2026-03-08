@@ -213,24 +213,44 @@ function RecipeDetail({ user }: { user: string | null }) {
 
           <Divider sx={{ mb: 4 }} />
 
-          <Button
-            variant="contained"
-            onClick={handleRemix}
-            sx={{
-              bgcolor: "#1a1a2e",
-              color: "#D4AF37",
-              borderRadius: 0,
-              px: 4,
-              py: 1.5,
-              fontWeight: 700,
-              letterSpacing: 1,
-              fontSize: "0.85rem",
-              alignSelf: "flex-start",
-              "&:hover": { bgcolor: "#2d1b00" },
-            }}
-          >
-            Remix Recipe
-          </Button>
+          <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+            <Button
+              variant="contained"
+              onClick={handleRemix}
+              sx={{
+                bgcolor: "#1a1a2e",
+                color: "#D4AF37",
+                borderRadius: 0,
+                px: 4,
+                py: 1.5,
+                fontWeight: 700,
+                letterSpacing: 1,
+                fontSize: "0.85rem",
+                alignSelf: "flex-start",
+                "&:hover": { bgcolor: "#2d1b00" },
+              }}
+            >
+              Remix Recipe
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => navigate(`/history/${id}`)}
+              sx={{
+                borderColor: "#1a1a2e",
+                color: "#1a1a2e",
+                borderRadius: 0,
+                px: 4,
+                py: 1.5,
+                fontWeight: 700,
+                letterSpacing: 1,
+                fontSize: "0.85rem",
+                alignSelf: "flex-start",
+                "&:hover": { borderColor: "#D4AF37", color: "#D4AF37" },
+              }}
+            >
+              View History
+            </Button>
+          </Box>
 
           {!user && (
             <Typography sx={{ mt: 1.5, color: "#aaa", fontSize: "0.8rem" }}>

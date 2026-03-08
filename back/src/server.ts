@@ -400,6 +400,19 @@ app.delete("/api/comments/:commentId", async (req, res) => {
   }
 });
 
+app.get("/api/recipes/:id/remixes", async (req, res) => {
+  let { id } = req.params;
+  try {
+    let remixes = await db.all(
+      "SELECT id, title, image_url, category, created_by, parent_id FROM recipes WHERE parent_id = ?",
+      [id]
+    );
+    res.json({ remixes });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load remixes." });
+  }
+});
+
 let port = 3000;
 let host = "localhost";
 let protocol = "http";

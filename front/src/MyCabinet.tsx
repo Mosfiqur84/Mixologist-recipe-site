@@ -26,8 +26,16 @@ interface Recipe {
 
 function MyCabinet({ user }: { user: string | null }) {
   let navigate = useNavigate();
-  let [tab, setTab] = useState(0);
+  const [tab, setTab] = useState(() => {
+  const savedTab = localStorage.getItem("activeCabinetTab");
+  return savedTab ? parseInt(savedTab, 10) : 0;
+});
   let [ownRecipes, setOwnRecipes] = useState<Recipe[]>([]);
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  setTab(newValue);
+  localStorage.setItem("activeCabinetTab", newValue.toString());
+};
 
   let [favoriteRecipes, setFavoriteRecipes] = useState<Recipe[]>([]);
   let [openFav, setOpenFav] = useState(false);
@@ -104,7 +112,7 @@ function MyCabinet({ user }: { user: string | null }) {
 
       <Tabs
         value={tab}
-        onChange={(_, v) => setTab(v)}
+        onChange={handleTabChange}
         sx={{
           mb: 4,
           borderBottom: "2px solid #e8e8e8",

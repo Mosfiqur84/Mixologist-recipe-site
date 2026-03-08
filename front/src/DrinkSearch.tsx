@@ -4,7 +4,7 @@ import axios from "axios";
 import { 
   TextField, Button, Card, CardMedia, CardContent, Typography, Box, Dialog, 
   DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemText, 
-  Divider, ToggleButton, ToggleButtonGroup 
+  Divider, ToggleButton, ToggleButtonGroup, Snackbar, Alert
 } from "@mui/material";
 
 
@@ -35,6 +35,8 @@ function DrinkSearch() {
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+const [snackbarMsg, setSnackbarMsg] = useState("");
   
   // 's' for name (search), 'i' for ingredient (filter)
   const [searchType, setSearchType] = useState<"s" | "i">("s");
@@ -95,13 +97,10 @@ function DrinkSearch() {
   };
 
   const handleSaveToCabinet = async () => {
-    try {
-      // If API recipe
-      if (selectedDrink) {
-        let recipeId = selectedDrink.idDrink;
-
-        // Transform API ingredients into a single readable string for your database
-        const ingredientsString = Array.from({ length: 15 })
+  try {
+    // 1. If it's a new recipe from the external API
+    if (selectedDrink) {
+      const ingredientsString = Array.from({ length: 15 })
         .map((_, i) => {
           const ing = selectedDrink[`strIngredient${i + 1}`];
           const meas = selectedDrink[`strMeasure${i + 1}`];
@@ -110,33 +109,46 @@ function DrinkSearch() {
         .filter(Boolean)
         .join(", ");
 
-        await axios.post(`/api/cabinet/${recipeId}`, {
-          id: selectedDrink.idDrink,
-          title: selectedDrink.strDrink,
-          instructions: selectedDrink.strInstructions,
-          ingredients: ingredientsString,
-          image_url: selectedDrink.strDrinkThumb,
-          category: selectedDrink.strCategory,
-        });
+      await axios.post(`/api/cabinet/${selectedDrink.idDrink}`, {
+        id: selectedDrink.idDrink,
+        title: selectedDrink.strDrink,
+        instructions: selectedDrink.strInstructions,
+        ingredients: ingredientsString,
+        image_url: selectedDrink.strDrinkThumb,
+        category: selectedDrink.strCategory,
+      });
 
-        alert("Saved to Cabinet!");
+      setSnackbarMsg("Saved to Cabinet!");
+      setOpenSnackbar(true);
+      
+      // Brief delay so they see the success before the window closes
+      setTimeout(() => {
         handleCloseDialog();
-        return;
-      }
-
-      // If DB recipe
-      if (selectedDbRecipe) {
-        await axios.post(`/api/cabinet/${selectedDbRecipe.id}`);
-        alert("Saved to Cabinet!");
-        handleCloseDialog();
-        return;
-      }
-
-      alert("Nothing selected.");
-    } catch (err: any) {
-      alert("Could not save recipe.");
+      }, 1000);
+      return;
     }
-  };
+
+    // 2. If it's a recipe already in the DB (User created)
+    if (selectedDbRecipe) {
+      await axios.post(`/api/cabinet/${selectedDbRecipe.id}`);
+      
+      setSnackbarMsg("Added to Favorites!");
+      setOpenSnackbar(true);
+
+      setTimeout(() => {
+        handleCloseDialog();
+      }, 1000);
+      return;
+    }
+
+    setSnackbarMsg("Nothing selected to save.");
+    setOpenSnackbar(true);
+
+  } catch (err: any) {
+    setSnackbarMsg("Could not save recipe. Try again later.");
+    setOpenSnackbar(true);
+  }
+}
 
   const handleCloseDialog = () => {
     setOpen(false);
@@ -343,6 +355,29 @@ function DrinkSearch() {
           </>
         )}
       </Dialog>
+
+
+      <Snackbar 
+  open={openSnackbar} 
+  autoHideDuration={3000} 
+  onClose={() => setOpenSnackbar(false)}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+>
+  <Alert 
+    onClose={() => setOpenSnackbar(false)} 
+    severity="success" 
+    variant="filled"
+    sx={{ 
+      width: '100%', 
+      bgcolor: '#1a1a2e', // Dark blue theme
+      color: '#D4AF37',   // Gold text
+      '& .MuiAlert-icon': { color: '#D4AF37' } 
+    }}
+  >
+    {snackbarMsg}
+  </Alert>
+</Snackbar>
+
     </Box>
   );
 }

@@ -8,6 +8,7 @@ import {
   Dialog,
   DialogTitle,
   Stack,
+  Paper
 } from "@mui/material";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import AddIcon from "@mui/icons-material/Add";
@@ -43,8 +44,8 @@ function MyCabinet({ user }: { user: string | null }) {
   let [remixedRecipes, setRemixedRecipes] = useState<Recipe[]>([]);
 
 
+
   useEffect(() => {
-    console.log("Cabinet useEffect triggered!")
     if (!user) return;
 
     //user's recipes
@@ -239,87 +240,250 @@ function MyCabinet({ user }: { user: string | null }) {
       )}
       {/* My Recipes Tab */}
 {tab === 1 && (
-  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "1fr 1fr 1fr" }, gap: 3 }}>
-    {ownRecipes.map((recipe) => (
-      <Card key={recipe.id} elevation={0} sx={{ borderRadius: 0, border: "1px solid #e8e8e8" }}>
-        <CardMedia component="img" height="180" image={recipe.image_url || "https://via.placeholder.com/180"} />
-        <CardContent sx={{ p: 2 }}>
-  <Typography sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 600, fontSize: "1rem" }}>
-    {recipe.title}
-  </Typography>
-  <Typography variant="body2" sx={{ color: "#888", fontSize: "0.8rem", mb: 2 }}>
-    {recipe.category || "Custom Recipe"}
-  </Typography>
-
-  <Stack spacing={1}>
-    {/* This button opens the modal using the local recipe data */}
-    <Button 
-      variant="outlined" 
-      fullWidth 
-      size="small" 
-      sx={{ borderRadius: 0, borderColor: "#e8e8e8", color: "#1a1a1a" }}
-      onClick={(e) => {
-        e.stopPropagation(); // Prevents navigating to edit if the card has a click listener
-        handleOpenFav(recipe); 
-      }}
-    >
-      View
-    </Button>
-    
-    <Box sx={{ display: 'flex', gap: 1 }}>
-      <Button variant="outlined" fullWidth size="small" onClick={() => navigate(`/edit/${recipe.id}`)}>
-        Edit
-      </Button>
-      <Button variant="outlined" fullWidth size="small" onClick={() => navigate(`/remix/${recipe.id}`)}>
-        Remix
-      </Button>
+  <Box>
+    {/* 1. Header Section - Matches Tab 0 & 2 */}
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
+      <FavoriteIcon sx={{ color: "#D4AF37", fontSize: 20 }} />
+      <Typography sx={{ fontWeight: 600, color: "#444", fontSize: "0.9rem" }}>
+        Your personal recipes
+      </Typography>
     </Box>
-  </Stack>
-</CardContent>
-      </Card>
-    ))}
+
+    {ownRecipes.length === 0 ? (
+      /* 2. Empty State Placeholder - Exactly matches Tab 0 structure */
+      <Box
+        sx={{
+          border: "2px dashed #e8e8e8",
+          borderRadius: 0,
+          p: 6,
+          textAlign: "center",
+        }}
+      >
+        <Typography sx={{ color: "#bbb", mb: 2 }}>No recipes created yet</Typography>
+        <Button
+          onClick={() => navigate("/add")} 
+          sx={{ color: "#D4AF37", fontWeight: 600 }}
+        >
+          Create Your First Recipe →
+        </Button>
+      </Box>
+    ) : (
+      /* 3. Grid Section - Matches Layout, Hover Transitions, and Fallbacks */
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr 1fr", sm: "1fr 1fr 1fr" },
+          gap: 3,
+        }}
+      >
+        {ownRecipes.map((recipe) => (
+          <Card
+            key={recipe.id}
+            elevation={0}
+            sx={{
+              borderRadius: 0,
+              border: "1px solid #e8e8e8",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                boxShadow: "0 12px 32px rgba(0,0,0,0.08)",
+              },
+            }}
+          >
+            {/* Image logic with 🍸 fallback matching other tabs */}
+            {recipe.image_url ? (
+              <CardMedia 
+                component="img" 
+                height="180" 
+                image={recipe.image_url} 
+                alt={recipe.title} 
+              />
+            ) : (
+              <Box
+                sx={{
+                  height: 180,
+                  bgcolor: "#f5f0e8",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Typography sx={{ color: "#D4AF37", fontFamily: "'Playfair Display', serif", fontSize: "2rem" }}>
+                  🍸
+                </Typography>
+              </Box>
+            )}
+
+            <CardContent sx={{ p: 2 }}>
+              <Typography sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 600, fontSize: "1rem" }}>
+                {recipe.title}
+              </Typography>
+              
+              <Typography variant="body2" sx={{ color: "#888", fontSize: "0.8rem", mb: 2 }}>
+                {recipe.category || "Custom Recipe"}
+              </Typography>
+
+              <Stack spacing={1}>
+                <Button 
+                  variant="outlined" 
+                  fullWidth 
+                  size="small" 
+                  sx={{ borderRadius: 0, borderColor: "#e8e8e8", color: "#1a1a1a" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenFav(recipe); 
+                  }}
+                >
+                  View
+                </Button>
+                
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button 
+                    variant="outlined" 
+                    fullWidth 
+                    size="small" 
+                    sx={{ borderRadius: 0 }}
+                    onClick={() => navigate(`/edit/${recipe.id}`)}
+                  >
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="outlined" 
+                    fullWidth 
+                    size="small" 
+                    sx={{ borderRadius: 0 }}
+                    onClick={() => navigate(`/remix/${recipe.id}`)}
+                  >
+                    Remix
+                  </Button>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
+    )}
   </Box>
 )}
       {/* Remixed Tab */}
 {tab === 2 && (
-  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "1fr 1fr 1fr" }, gap: 3 }}>
-    {remixedRecipes.map((recipe) => (
-      <Card key={recipe.id} elevation={0} sx={{ borderRadius: 0, border: "1px solid #e8e8e8" }}>
-        <CardMedia component="img" height="180" image={recipe.image_url || "https://via.placeholder.com/180"} />
-        <CardContent sx={{ p: 2 }}>
-          <Typography sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 600, fontSize: "1rem" }}>
-            {recipe.title}
-          </Typography>
-          <Typography variant="body2" sx={{ color: "#D4AF37", fontSize: "0.8rem", fontWeight: 600, mb: 2 }}>
-            Remixed by: {recipe.created_by}
-          </Typography>
+  <Box>
+    {/* Header Section - Exactly matches Tab 0 */}
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
+      <FavoriteIcon sx={{ color: "#D4AF37", fontSize: 20 }} />
+      <Typography sx={{ fontWeight: 600, color: "#444", fontSize: "0.9rem" }}>
+        Your remixed creations
+      </Typography>
+    </Box>
 
-          <Stack spacing={1}>
-            <Button 
-              variant="outlined" fullWidth size="small" 
-              sx={{ borderRadius: 0, borderColor: "#e8e8e8", color: "#1a1a1a" }}
-              onClick={() => handleOpenFav(recipe)} // Uses the Favorites-style modal
-            >
-              View
-            </Button>
-            <Button 
-              variant="outlined" fullWidth size="small" sx={{ borderRadius: 0 }}
-              onClick={() => navigate(`/remix/${recipe.id}`)}
-            >
-              Remix
-            </Button>
-            <Button 
-  variant="outlined" 
-  size="small" 
-  sx={{ borderColor: "#D4AF37", color: "#1a1a2e" }}
-  onClick={() => navigate(`/history/${recipe.id}`)}
->
-  History
-</Button>
-          </Stack>
-        </CardContent>
-      </Card>
-    ))}
+    {remixedRecipes.length === 0 ? (
+      /* Empty State Placeholder - Exactly matches Tab 0 structure */
+      <Box
+        sx={{
+          border: "2px dashed #e8e8e8",
+          borderRadius: 0,
+          p: 6,
+          textAlign: "center",
+        }}
+      >
+        <Typography sx={{ color: "#bbb", mb: 2 }}>No remixes yet</Typography>
+        <Button
+          onClick={() => navigate("/drinks")}
+          sx={{ color: "#D4AF37", fontWeight: 600 }}
+        >
+          Discover Recipes to Remix →
+        </Button>
+      </Box>
+    ) : (
+      /* Grid Section - Matches Layout, Hover Transitions, and Fallbacks */
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr 1fr", sm: "1fr 1fr 1fr" },
+          gap: 3,
+        }}
+      >
+        {remixedRecipes.map((recipe) => (
+          <Card
+            key={recipe.id}
+            elevation={0}
+            sx={{
+              borderRadius: 0,
+              border: "1px solid #e8e8e8",
+              transition: "transform 0.2s, box-shadow 0.2s",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                boxShadow: "0 12px 32px rgba(0,0,0,0.08)",
+              },
+            }}
+          >
+            {/* Image logic with 🍸 fallback matching Tab 0 */}
+            {recipe.image_url ? (
+              <CardMedia 
+                component="img" 
+                height="180" 
+                image={recipe.image_url} 
+                alt={recipe.title} 
+              />
+            ) : (
+              <Box
+                sx={{
+                  height: 180,
+                  bgcolor: "#f5f0e8",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Typography sx={{ color: "#D4AF37", fontFamily: "'Playfair Display', serif", fontSize: "2rem" }}>
+                  🍸
+                </Typography>
+              </Box>
+            )}
+
+            <CardContent sx={{ p: 2 }}>
+              <Typography sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 600, fontSize: "1rem" }}>
+                {recipe.title}
+              </Typography>
+              
+              <Typography variant="body2" sx={{ color: "#D4AF37", fontSize: "0.8rem", fontWeight: 600, mb: 2 }}>
+                Remixed by: {recipe.created_by || "You"}
+              </Typography>
+
+              <Stack spacing={1}>
+                <Button 
+                  variant="outlined" 
+                  fullWidth 
+                  size="small" 
+                  sx={{ borderRadius: 0, borderColor: "#e8e8e8", color: "#1a1a1a" }}
+                  onClick={() => handleOpenFav(recipe)} 
+                >
+                  View
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  fullWidth 
+                  size="small" 
+                  sx={{ borderRadius: 0 }}
+                  onClick={() => navigate(`/remix/${recipe.id}`)}
+                >
+                  Remix
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  fullWidth
+                  size="small" 
+                  sx={{ borderRadius: 0, borderColor: "#D4AF37", color: "#1a1a2e" }}
+                  onClick={() => navigate(`/history/${recipe.id}`)}
+                >
+                  History
+                </Button>
+              </Stack>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
+    )}
   </Box>
 )}
 
